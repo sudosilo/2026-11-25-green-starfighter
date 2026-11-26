@@ -4,80 +4,132 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v2 -->
-<!-- GREEN PHONE EDIT: Polygon Starfighter v1, flight model only -->
+<!-- GREEN PHONE EDIT: v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
-/* GREEN PHONE EDIT: v2 restyle to match MobbyHill, off white drafting look and ink wireframe */
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#eef0ec;color:var(--ink);font-family:var(--ui);touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 canvas{display:block}
-.hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:10px;font-size:13px;font-weight:800;line-height:1.5;background:var(--panel);border:2px solid var(--edge);padding:5px 10px;border-radius:8px;pointer-events:none;font-variant-numeric:tabular-nums}
-.topbtns{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;display:flex;gap:6px}
-.chip{background:var(--panel);border:2px solid var(--edge);border-radius:7px;padding:7px 12px;font:inherit;font-size:13px;font-weight:800;color:var(--ink)}
+button{font-family:var(--ui)}
+.play{display:none}
+body.playing .play{display:block}
+.hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:10px;font-size:13px;font-weight:800;line-height:1.45;background:var(--panel);border:2px solid var(--edge);padding:5px 10px;border-radius:8px;pointer-events:none;font-variant-numeric:tabular-nums}
+.topbtns{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;gap:6px}
+body.playing .topbtns{display:flex}
+.chip{background:var(--panel);border:2px solid var(--edge);border-radius:7px;padding:7px 12px;font-size:13px;font-weight:800;color:var(--ink)}
 .pad{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:170px;height:170px}
 .pad .b{position:absolute;width:58px;height:58px;border-radius:9px;background:#fff;border:2px solid var(--edge);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:var(--ink);box-shadow:0 3px 0 #b9b6ab}
 .pad .b.on{background:#f6dca5;border-color:#c27a12;transform:translateY(2px);box-shadow:0 1px 0 #b9b6ab}
 .b.up{left:56px;top:0}.b.dn{left:56px;bottom:0}.b.lf{left:0;top:56px}.b.rt{right:0;top:56px}
 .slider{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:66px;height:62vh;max-height:300px;border-radius:10px;border:2px solid var(--edge);overflow:hidden;background:repeating-linear-gradient(0deg,var(--panel) 0 9px,var(--panel2) 9px 12px)}
 .slider .fill{position:absolute;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,#cfe8cf 0 9px,#b3d8b3 9px 12px);border-top:3px solid var(--green)}
-.slider .lbl{position:absolute;left:0;right:0;top:6px;text-align:center;font-size:11px;font-weight:900;color:var(--ink)}
-.arrow{position:fixed;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:22px solid var(--orange);pointer-events:none;display:none}
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(238,240,236,.86);padding:16px;z-index:20}
+.slider .lbl{position:absolute;left:0;right:0;top:6px;text-align:center;font-size:11px;font-weight:900}
+.firewrap{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);right:92px;width:96px}
+.fire{width:96px;height:96px;border-radius:50%;background:#fff;border:3px solid var(--red);color:var(--red);font-size:17px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #a3483f}
+.fire.on{background:#f3c9c4;transform:translateY(3px);box-shadow:0 1px 0 #a3483f}
+.heat{height:10px;background:#fff;border:2px solid var(--edge);border-radius:5px;overflow:hidden;margin-bottom:6px}
+.heat i{display:block;height:100%;width:0;background:var(--yellow)}
+.heatlbl{font-size:11px;font-weight:900;text-align:center;margin-bottom:2px}
+.arrow{position:fixed;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:20px solid var(--orange);pointer-events:none;display:none}
+.arrow.foe{border-bottom-color:var(--red)}
+.cross{position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border:2px solid var(--green);border-radius:50%;pointer-events:none;display:none}
+.cross:before,.cross:after{content:"";position:absolute;background:var(--green)}
+.cross:before{left:15px;top:-8px;width:2px;height:46px;clip-path:polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%)}
+.cross:after{top:15px;left:-8px;height:2px;width:46px;clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%)}
+.flash{position:fixed;inset:0;pointer-events:none;background:var(--red);opacity:0;transition:opacity .25s}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 54px);transform:translateX(-50%);background:var(--yellow);border:2px solid #b58d12;border-radius:6px;padding:4px 12px;font-size:14px;font-weight:900;color:#3a2f05;opacity:0;transition:opacity .3s;pointer-events:none}
+
+/* GREEN PHONE EDIT: landing screen, panel on the left, live wireframe ship preview on the right */
+.menu{position:fixed;left:12px;top:12px;bottom:12px;width:min(400px,50vw);display:flex;flex-direction:column;background:rgba(236,234,227,.94);border:2px solid var(--edge);border-radius:12px;padding:12px 14px;box-shadow:0 6px 0 #b9b6ab;overflow:auto}
+body.playing .menu{display:none}
+.logo{font-size:26px;font-weight:900;letter-spacing:1px;line-height:1}
+.logo span{color:var(--green)}
+.sub{font-size:12px;color:var(--ink2);margin:4px 0 10px}
+.ships{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.ships button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:8px 2px;font-size:13px;font-weight:900;color:var(--ink)}
+.ships button.sel{background:#dcefdc;border-color:var(--green);color:#24552a}
+.shipname{font-size:20px;font-weight:900;color:#24552a;margin-top:10px}
+.perk{font-size:13px;color:var(--ink2);margin:2px 0 8px;min-height:34px}
+.stat{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin:4px 0}
+.stat b{width:72px;font-weight:800}
+.stat .bar{flex:1;height:9px;background:#fff;border:1px solid var(--edge);border-radius:4px;overflow:hidden}
+.stat .bar i{display:block;height:100%;background:var(--green)}
+.mrow{display:flex;gap:8px;margin-top:auto;padding-top:12px}
+.mrow button{flex:1;border:2px solid var(--edge);background:#fff;border-radius:9px;padding:12px 6px;font-size:16px;font-weight:900;color:var(--ink)}
+.mrow button.go{background:var(--yellow);border-color:#b58d12;color:#3a2f05}
+.best{font-size:12px;font-weight:800;color:var(--ink2);margin-top:8px}
+@media (orientation:portrait){.menu{top:auto;width:auto;right:12px;max-height:62vh}}
+
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(238,240,236,.86);padding:16px;z-index:20}
 .card{background:var(--panel);border:2px solid var(--edge);border-radius:12px;padding:16px;max-width:460px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 6px 0 #b9b6ab}
 .card h1{margin:0 0 6px;font-size:22px;font-weight:900;text-align:center}
-.card p{margin:6px 0;font-size:14px;color:var(--ink2);text-align:center}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;font-size:14px;font-weight:800}
 .seg{display:flex;gap:4px}
-.seg button{border:2px solid var(--edge);background:#fff;border-radius:7px;padding:7px 10px;font:inherit;font-size:13px;font-weight:800;color:var(--ink)}
+.seg button{border:2px solid var(--edge);background:#fff;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:800;color:var(--ink)}
 .seg button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
-.go{display:block;width:100%;margin-top:12px;padding:13px;border:2px solid #b58d12;border-radius:9px;background:var(--yellow);color:#3a2f05;font:inherit;font-size:17px;font-weight:900}
-.flash{position:fixed;inset:0;pointer-events:none;background:var(--red);opacity:0;transition:opacity .25s}
 input[type=range]{width:150px;accent-color:var(--blue)}
 </style>
 </head>
 <body>
-<div class="hud" id="hud"></div>
-<div class="topbtns">
+<div class="hud play" id="hud"></div>
+<div class="topbtns play" style="display:none">
   <button class="chip" id="recenterBtn">Recenter</button>
-  <button class="chip" id="setBtn">Settings</button>
+  <button class="chip" id="pauseBtn">Pause</button>
 </div>
-<div class="pad" id="pad">
+<div class="pad play" id="pad">
   <div class="b up" data-k="up">&#9650;</div>
   <div class="b dn" data-k="dn">&#9660;</div>
   <div class="b lf" data-k="lf">&#9664;</div>
   <div class="b rt" data-k="rt">&#9654;</div>
 </div>
-<div class="slider" id="slider"><div class="fill" id="fill"></div><div class="lbl">THROTTLE</div></div>
-<div class="arrow" id="arrow"></div>
+<div class="slider play" id="slider"><div class="fill" id="fill"></div><div class="lbl">THROTTLE</div></div>
+<div class="firewrap play" id="firewrap">
+  <div class="heatlbl" id="heatLbl">BARREL HEAT</div>
+  <div class="heat"><i id="heatFill"></i></div>
+  <div class="fire" id="fireBtn">FIRE</div>
+</div>
+<div class="arrow" id="arrowRing"></div>
+<div class="arrow foe" id="arrowFoe"></div>
+<div class="cross" id="cross"></div>
 <div class="flash" id="flash"></div>
+<div class="toast" id="toast"></div>
 
-<div class="overlay" id="overlay">
+<div class="menu" id="menu">
+  <div class="logo">POLYGON <span>STARFIGHTER</span></div>
+  <div class="sub">Pick a ship. Tilt or buttons to fly, hold FIRE to shoot.</div>
+  <div class="ships" id="ships"></div>
+  <div class="shipname" id="shipName"></div>
+  <div class="perk" id="shipPerk"></div>
+  <div id="stats"></div>
+  <div class="best" id="best"></div>
+  <div class="mrow"><button id="ctrlBtn">Controls</button><button class="go" id="launchBtn">Launch</button></div>
+</div>
+
+<div class="overlay" id="settings">
   <div class="card">
-    <h1 id="title">Polygon Starfighter</h1>
-    <p id="intro">Hold the phone sideways. Tilt left and right to turn, tilt forward to dive and back to climb. Slide your thumb up the throttle bar on the right to go faster, like an ether wand. Fly through the orange rings.</p>
+    <h1 id="setTitle">Controls</h1>
     <div class="row"><span>Steering</span><div class="seg" data-opt="steer"><button data-v="tilt">Tilt</button><button data-v="buttons">Buttons</button></div></div>
     <div class="row"><span>Throttle</span><div class="seg" data-opt="throttle"><button data-v="slider">Slider</button><button data-v="tilt">Tilt fwd/back</button></div></div>
     <div class="row"><span>Invert climb/dive</span><div class="seg" data-opt="invPitch"><button data-v="false">Off</button><button data-v="true">On</button></div></div>
     <div class="row"><span>Invert turning</span><div class="seg" data-opt="invTurn"><button data-v="false">Off</button><button data-v="true">On</button></div></div>
     <div class="row"><span>Tilt sensitivity</span><input type="range" id="sens" min="0.4" max="2" step="0.1"></div>
-    <button class="go" id="goBtn">Launch</button>
+    <div class="mrow"><button id="toMenuBtn">Main menu</button><button class="go" id="closeSetBtn">Resume</button></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // GREEN PHONE EDIT: settings with safe storage
-const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1};
+const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,best:0};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
 function saveS(){try{localStorage.setItem('pf_settings',JSON.stringify(S));}catch(e){}}
-
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const $=id=>document.getElementById(id);
+const rnd=(a,b)=>a+Math.random()*(b-a);
 
-// GREEN PHONE EDIT: renderer and scene, light theme with transparent canvas over gradient
+// GREEN PHONE EDIT: renderer and scene, paper background with ink wireframe
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
 renderer.setSize(innerWidth,innerHeight);
@@ -85,12 +137,9 @@ renderer.setClearColor(0xeef0ec,1);
 document.body.insertBefore(renderer.domElement,document.body.firstChild);
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0xeef0ec,200,1100);
-const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,8000);
-scene.add(new THREE.HemisphereLight(0xffffff,0xd8c8e8,0.75));
-const sun=new THREE.DirectionalLight(0xfff1e0,0.75);sun.position.set(1,1.4,0.6);scene.add(sun);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,9000);
 
-// GREEN PHONE EDIT: wireframe helper. paper colored solid hides back lines, ink edges on top
-const PAPER=0xeef0ec,INK=0x2e3338;
+const PAPER=0xeef0ec,INK=0x2e3338,GREEN=0x3f8a3f,GREENFILL=0xdcefdc;
 function W(geo,line,fill,noFog){
   const g=new THREE.Group();
   g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:fill||PAPER,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1,fog:!noFog})));
@@ -98,34 +147,87 @@ function W(geo,line,fill,noFog){
   return g;
 }
 
-// GREEN PHONE EDIT: low poly ship, nose points along local -Z
-function buildShip(){
-  const g=new THREE.Group();
-  const bg=new THREE.ConeGeometry(0.7,4.2,4);bg.rotateY(Math.PI/4);bg.rotateX(-Math.PI/2);
-  g.add(W(bg,INK,0xffffff));
-  const pg=new THREE.OctahedronGeometry(0.45);pg.scale(0.8,0.6,1.6);pg.translate(0,0.42,-0.3);
-  g.add(W(pg,0x2a62b0,0xcfe0f4));
-  const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(2.8,1.4);sh.lineTo(2.8,2.0);sh.lineTo(0,1.6);sh.lineTo(0,0);
-  const wr=new THREE.ExtrudeGeometry(sh,{depth:0.14,bevelEnabled:false});wr.rotateX(Math.PI/2);wr.translate(0.3,0.07,-0.9);
-  g.add(W(wr,0xd2601a,0xfbe6d6));
-  const wl=wr.clone();wl.scale(-1,1,1);
-  g.add(W(wl,0xd2601a,0xfbe6d6));
-  const fg=new THREE.ConeGeometry(0.5,1.2,3);fg.scale(0.25,1,1);fg.translate(0,0.75,1.2);
-  g.add(W(fg,0xd2601a,0xfbe6d6));
-  const engs=[];
-  [-0.55,0.55].forEach(x=>{
-    const eg=new THREE.CylinderGeometry(0.26,0.32,1.1,6);eg.rotateX(Math.PI/2);eg.translate(x,-0.05,1.5);
-    g.add(W(eg,INK,0xdedbd1));
-    const glow=new THREE.Mesh(new THREE.ConeGeometry(0.24,1,6),new THREE.MeshBasicMaterial({color:0xf2c230}));
-    glow.rotation.x=Math.PI/2;glow.position.set(x,-0.05,2.4);g.add(glow);engs.push(glow);
-  });
+// GREEN PHONE EDIT: five green ships, each with its own perks
+const SHIPS=[
+  {name:'Dart',perk:'All rounder. Good speed, good turning, steady twin lasers.',speed:130,turn:1.35,pitch:1.5,rate:11,dmg:10,heat:0.045,cool:0.45,guns:[[-1.1,0,-0.6],[1.1,0,-0.6]]},
+  {name:'Hornet',perk:'Fastest ship in the fleet. Light nose gun that heats up quick.',speed:175,turn:1.4,pitch:1.6,rate:10,dmg:7,heat:0.065,cool:0.45,guns:[[0,-0.2,-2.8]]},
+  {name:'Ox',perk:'Heavy hitter. Slow and wide, but the twin cannons hit twice as hard.',speed:100,turn:1.0,pitch:1.15,rate:8,dmg:20,heat:0.055,cool:0.5,guns:[[-1.9,0,-1.2],[1.9,0,-1.2]]},
+  {name:'Mantis',perk:'Tightest turns of any ship. Forward swept wings, average guns.',speed:125,turn:2.0,pitch:2.1,rate:11,dmg:9,heat:0.05,cool:0.45,guns:[[-1.8,0,-1.6],[1.8,0,-1.6]]},
+  {name:'Furnace',perk:'Radiator ring keeps the barrels cool. Fastest fire rate, rarely overheats.',speed:115,turn:1.25,pitch:1.4,rate:16,dmg:8,heat:0.022,cool:0.6,guns:[[-0.5,-0.3,-1.6],[0.5,-0.3,-1.6]]}
+];
+function gw(geo,fill){return W(geo,GREEN,fill||GREENFILL);}
+function wingGeo(pts,depth,x,y,z,mirror){
+  const sh=new THREE.Shape();sh.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)sh.lineTo(pts[i][0],pts[i][1]);sh.lineTo(pts[0][0],pts[0][1]);
+  const g=new THREE.ExtrudeGeometry(sh,{depth:depth,bevelEnabled:false});g.rotateX(Math.PI/2);if(mirror)g.scale(-1,1,1);g.translate(x,y,z);return g;
+}
+function engine(g,x,y,z,r,engs){
+  const eg=new THREE.CylinderGeometry(r*0.85,r,1.1,6);eg.rotateX(Math.PI/2);eg.translate(x,y,z);g.add(gw(eg,0xc9dcc9));
+  const glow=new THREE.Mesh(new THREE.ConeGeometry(r*0.8,1,6),new THREE.MeshBasicMaterial({color:0xf2c230}));
+  glow.rotation.x=Math.PI/2;glow.position.set(x,y,z+0.9);g.add(glow);engs.push({m:glow,z:z+0.45});
+}
+function buildShip(i){
+  const g=new THREE.Group(),engs=[];
+  if(i===0){ // Dart
+    const b=new THREE.ConeGeometry(0.7,4.2,4);b.rotateY(Math.PI/4);b.rotateX(-Math.PI/2);g.add(gw(b,0xffffff));
+    const p=new THREE.OctahedronGeometry(0.45);p.scale(0.8,0.6,1.6);p.translate(0,0.42,-0.3);g.add(W(p,INK,0xcfe0f4));
+    const w=[[0,0],[2.8,1.4],[2.8,2.0],[0,1.6]];
+    g.add(gw(wingGeo(w,0.14,0.3,0.07,-0.9)));g.add(gw(wingGeo(w,0.14,-0.3,0.07,-0.9,true)));
+    const f=new THREE.ConeGeometry(0.5,1.2,3);f.scale(0.25,1,1);f.translate(0,0.75,1.2);g.add(gw(f));
+    engine(g,-0.55,-0.05,1.5,0.32,engs);engine(g,0.55,-0.05,1.5,0.32,engs);
+  }else if(i===1){ // Hornet
+    const b=new THREE.ConeGeometry(0.5,5.6,4);b.rotateY(Math.PI/4);b.rotateX(-Math.PI/2);b.translate(0,0,-0.4);g.add(gw(b,0xffffff));
+    const p=new THREE.OctahedronGeometry(0.35);p.scale(0.8,0.6,1.8);p.translate(0,0.32,-0.6);g.add(W(p,INK,0xcfe0f4));
+    const w=[[0,0],[2.0,2.2],[2.0,2.5],[0,2.0]];
+    g.add(gw(wingGeo(w,0.1,0.2,0,-0.2)));g.add(gw(wingGeo(w,0.1,-0.2,0,-0.2,true)));
+    [-0.45,0.45].forEach(x=>{const f=new THREE.ConeGeometry(0.4,1.1,3);f.scale(0.22,1,1.2);f.rotateZ(x>0?-0.35:0.35);f.translate(x,0.55,1.9);g.add(gw(f));});
+    engine(g,0,0,2.3,0.42,engs);
+  }else if(i===2){ // Ox
+    const b=new THREE.BoxGeometry(1.7,0.95,3.8);g.add(gw(b,0xffffff));
+    const n=new THREE.CylinderGeometry(0.0,0.85,1.3,4);n.rotateY(Math.PI/4);n.rotateX(-Math.PI/2);n.scale(1,0.8,1);n.translate(0,0,-2.55);g.add(gw(n,0xffffff));
+    const p=new THREE.BoxGeometry(0.9,0.4,1.0);p.translate(0,0.65,-0.6);g.add(W(p,INK,0xcfe0f4));
+    const w=new THREE.BoxGeometry(4.6,0.22,1.5);w.translate(0,-0.1,0.2);g.add(gw(w));
+    [-1.9,1.9].forEach(x=>{const c=new THREE.CylinderGeometry(0.22,0.22,2.4,6);c.rotateX(Math.PI/2);c.translate(x,0,-0.6);g.add(gw(c,0xc9dcc9));});
+    engine(g,-0.5,0,2.3,0.4,engs);engine(g,0.5,0,2.3,0.4,engs);
+  }else if(i===3){ // Mantis
+    const b=new THREE.OctahedronGeometry(1);b.scale(0.6,0.5,2.4);g.add(gw(b,0xffffff));
+    const p=new THREE.OctahedronGeometry(0.4);p.scale(0.8,0.6,1.5);p.translate(0,0.38,-0.7);g.add(W(p,INK,0xcfe0f4));
+    const w=[[0,0],[2.6,-1.6],[2.6,-1.0],[0,1.2]];
+    g.add(gw(wingGeo(w,0.12,0.35,0.06,0.4)));g.add(gw(wingGeo(w,0.12,-0.35,0.06,0.4,true)));
+    const f=new THREE.ConeGeometry(0.45,1.0,3);f.scale(0.22,1,1);f.translate(0,0.6,1.4);g.add(gw(f));
+    engine(g,0,0,2.0,0.38,engs);
+  }else{ // Furnace
+    const b=new THREE.CylinderGeometry(0.55,0.75,4.2,8);b.rotateX(Math.PI/2);g.add(gw(b,0xffffff));
+    const n=new THREE.ConeGeometry(0.55,1.3,8);n.rotateX(-Math.PI/2);n.translate(0,0,-2.75);g.add(gw(n,0xffffff));
+    const p=new THREE.OctahedronGeometry(0.38);p.scale(0.9,0.6,1.5);p.translate(0,0.55,-0.8);g.add(W(p,INK,0xcfe0f4));
+    const r=new THREE.TorusGeometry(1.45,0.16,4,12);r.translate(0,0,1.0);g.add(gw(r,0xc9dcc9));
+    for(let k=0;k<4;k++){const s=new THREE.BoxGeometry(0.12,0.9,0.9);s.translate(0,0.95,1.0);s.rotateZ(k*Math.PI/2+Math.PI/4);g.add(gw(s));}
+    [-0.5,0.5].forEach(x=>{const c=new THREE.CylinderGeometry(0.12,0.12,1.4,5);c.rotateX(Math.PI/2);c.translate(x,-0.3,-1.0);g.add(gw(c,0xc9dcc9));});
+    engine(g,0,0,2.4,0.55,engs);
+  }
   g.userData.engs=engs;
   return g;
 }
-const ship=new THREE.Group();scene.add(ship);
-const shipMesh=buildShip();ship.add(shipMesh);
 
-// GREEN PHONE EDIT: rocky asteroids, jittered icosahedrons
+// GREEN PHONE EDIT: wireframe space backdrop, stars as little ink crosses plus a ringed planet
+(function(){
+  const pts=[];
+  for(let i=0;i<700;i++){
+    const v=new THREE.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(6000);
+    const s=rnd(6,22);
+    pts.push(v.x-s,v.y,v.z,v.x+s,v.y,v.z,v.x,v.y-s,v.z,v.x,v.y+s,v.z);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  const stars=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x8a8f94,fog:false}));
+  stars.name='stars';scene.add(stars);
+})();
+const sky=scene.getObjectByName('stars');
+const planet=W(new THREE.IcosahedronGeometry(900,2),0x9aa6b0,PAPER,true);
+planet.position.set(-2200,-500,-4200);scene.add(planet);
+const pring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.RingGeometry(1150,1500,48,2)),new THREE.LineBasicMaterial({color:0xc4a05a,fog:false}));
+pring.position.copy(planet.position);pring.rotation.x=1.2;pring.rotation.y=0.3;scene.add(pring);
+const moon=W(new THREE.IcosahedronGeometry(220,1),0xb08a5a,PAPER,true);moon.position.set(2600,900,-3800);scene.add(moon);
+
+// GREEN PHONE EDIT: asteroids with hit points by size
 const ROCK_COLORS=[0x7a5c3c,0x5f6469,0x8a6a2a,0x4a6a88];
 function rockGeo(r){
   const g=new THREE.IcosahedronGeometry(r,1);
@@ -141,52 +243,93 @@ const FIELD=700;
 const rocks=[];
 for(let i=0;i<110;i++){
   const r=3+Math.pow(Math.random(),2)*28;
-  const m=W(rockGeo(r),ROCK_COLORS[i%4]);
-  m.position.set((Math.random()*2-1)*FIELD,(Math.random()*2-1)*FIELD,(Math.random()*2-1)*FIELD);
-  if(m.position.length()<60)m.position.z-=200;
-  m.userData={r:r*1.05,spin:new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).multiplyScalar(0.6)};
+  const col=ROCK_COLORS[i%4];
+  const m=W(rockGeo(r),col);
+  m.position.set(rnd(-1,1)*FIELD,rnd(-1,1)*FIELD,rnd(-1,1)*FIELD);
+  if(m.position.length()<70)m.position.z-=220;
+  m.userData={r:r*1.05,maxhp:Math.round(r*6),hp:Math.round(r*6),col:col,hitT:0,spin:new THREE.Vector3(rnd(-.3,.3),rnd(-.3,.3),rnd(-.3,.3))};
   scene.add(m);rocks.push(m);
 }
 
-// GREEN PHONE EDIT: space dust gives the feeling of speed
-const DUST=130,dustN=700;
+// GREEN PHONE EDIT: space dust for speed feel
+const DUST=130,dustN=600;
 const dpos=new Float32Array(dustN*3);
-for(let i=0;i<dustN*3;i++)dpos[i]=(Math.random()*2-1)*DUST;
+for(let i=0;i<dustN*3;i++)dpos[i]=rnd(-1,1)*DUST;
 const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
 const dust=new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5f6469,size:0.4}));
 scene.add(dust);
 
-// GREEN PHONE EDIT: far planet with ring, ignores fog so it always shows
-const planet=W(new THREE.IcosahedronGeometry(900,2),0x9aa6b0,PAPER,true);
-planet.position.set(-2200,-500,-4200);scene.add(planet);
-const pring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.RingGeometry(1150,1500,48,2)),new THREE.LineBasicMaterial({color:0xc4a05a,fog:false}));
-pring.position.copy(planet.position);pring.rotation.x=1.2;pring.rotation.y=0.3;scene.add(pring);
-
-// GREEN PHONE EDIT: gate rings to fly through
+// GREEN PHONE EDIT: gate ring to fly through
 const gate=W(new THREE.TorusGeometry(11,1.3,6,18),0xd2601a,0xf6dca5);
 scene.add(gate);
-let gates=0;
+
+// GREEN PHONE EDIT: player ship
+const ship=new THREE.Group();scene.add(ship);
+let shipMesh=null;
+function setShip(i){
+  if(shipMesh)ship.remove(shipMesh);
+  shipMesh=buildShip(i);ship.add(shipMesh);
+}
+
+// GREEN PHONE EDIT: laser pool, player lasers green, enemy lasers red
+const boltGeo=new THREE.BoxGeometry(0.3,0.3,7);
+const boltMatP=new THREE.MeshBasicMaterial({color:0x2fae2f,fog:false});
+const boltMatE=new THREE.MeshBasicMaterial({color:0xc8362b,fog:false});
+const bolts=[];
+for(let i=0;i<240;i++){const m=new THREE.Mesh(boltGeo,boltMatP);m.visible=false;scene.add(m);bolts.push({m:m,v:new THREE.Vector3(),life:0,foe:false,dmg:0});}
+function shoot(from,dir,speed,foe,dmg,baseVel){
+  const b=bolts.find(x=>x.life<=0);if(!b)return;
+  b.life=1.6;b.foe=foe;b.dmg=dmg;b.m.material=foe?boltMatE:boltMatP;
+  b.m.position.copy(from);b.v.copy(dir).multiplyScalar(speed);if(baseVel)b.v.add(baseVel);
+  b.m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),dir);b.m.visible=true;
+}
+
+// GREEN PHONE EDIT: debris bits when something blows up
+const debGeo=new THREE.EdgesGeometry(new THREE.TetrahedronGeometry(1));
+const debris=[];
+for(let i=0;i<90;i++){const m=new THREE.LineSegments(debGeo,new THREE.LineBasicMaterial({color:INK}));m.visible=false;scene.add(m);debris.push({m:m,v:new THREE.Vector3(),life:0,spin:new THREE.Vector3()});}
+function boom(at,color,size,count){
+  for(let n=0;n<count;n++){
+    const d=debris.find(x=>x.life<=0);if(!d)return;
+    d.life=rnd(0.7,1.3);d.m.material.color.setHex(color);d.m.position.copy(at);
+    d.m.scale.setScalar(rnd(0.3,1)*size*0.25+0.4);
+    d.v.set(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(rnd(10,40)+size*2);
+    d.spin.set(rnd(-6,6),rnd(-6,6),rnd(-6,6));d.m.visible=true;
+  }
+}
+
+// GREEN PHONE EDIT: enemy ships, never green
+const FOE_COLORS=[[0xc8362b,0xf3c9c4],[0x2a62b0,0xcfe0f4],[0xc27a12,0xf6dca5]];
+function buildFoe(c){
+  const g=new THREE.Group();
+  const b=new THREE.OctahedronGeometry(1);b.scale(1.1,0.7,2.2);g.add(W(b,c[0],c[1]));
+  const w=new THREE.BoxGeometry(5.2,0.15,0.9);w.translate(0,0,0.6);g.add(W(w,c[0],c[1]));
+  [-2.6,2.6].forEach(x=>{const p=new THREE.BoxGeometry(0.2,1.8,1.8);p.translate(x,0,0.6);g.add(W(p,c[0],c[1]));});
+  const e=new THREE.CylinderGeometry(0.35,0.45,1,6);e.rotateX(Math.PI/2);e.translate(0,0,2.2);g.add(W(e,INK,c[1]));
+  return g;
+}
+const foes=[];
+for(let i=0;i<4;i++){
+  const m=buildFoe(FOE_COLORS[i%3]);m.visible=false;scene.add(m);
+  foes.push({m:m,alive:false,hp:0,q:new THREE.Quaternion(),respawn:rnd(1,4),cool:0,burst:0,wander:new THREE.Vector3(),wT:0,hitT:0,col:FOE_COLORS[i%3][0]});
+}
 
 // GREEN PHONE EDIT: flight state
-const pos=new THREE.Vector3(0,0,0);
-const vel=new THREE.Vector3();
-const q=new THREE.Quaternion();
+const pos=new THREE.Vector3(),vel=new THREE.Vector3(),q=new THREE.Quaternion();
 let speed=0,throttle=0.3,pitchRate=0,yawRate=0,bank=0,shake=0;
-const tmpQ=new THREE.Quaternion(),AX=new THREE.Vector3(1,0,0),AY=new THREE.Vector3(0,1,0),AZ=new THREE.Vector3(0,0,1);
-const MAXSPEED=130;
+let heat=0,overheat=false,fireCool=0,barrel=0,score=0,gates=0,hitsTaken=0,kills=0;
+const tmpQ=new THREE.Quaternion(),AX=new THREE.Vector3(1,0,0),AY=new THREE.Vector3(0,1,0);
+const tmp=new THREE.Vector3(),tmp2=new THREE.Vector3(),fwdV=new THREE.Vector3(),camOff=new THREE.Vector3(),mat4=new THREE.Matrix4();
+let SH=SHIPS[S.ship]||SHIPS[0];
 
 function placeGate(){
-  const f=new THREE.Vector3(0,0,-1).applyQuaternion(q);
-  const u=new THREE.Vector3(0,1,0).applyQuaternion(q);
-  const r=new THREE.Vector3(1,0,0).applyQuaternion(q);
-  gate.position.copy(pos).addScaledVector(f,380).addScaledVector(u,(Math.random()*2-1)*140).addScaledVector(r,(Math.random()*2-1)*180);
+  const f=new THREE.Vector3(0,0,-1).applyQuaternion(q),u=new THREE.Vector3(0,1,0).applyQuaternion(q),r=new THREE.Vector3(1,0,0).applyQuaternion(q);
+  gate.position.copy(pos).addScaledVector(f,380).addScaledVector(u,rnd(-140,140)).addScaledVector(r,rnd(-180,180));
   gate.lookAt(pos);
   rocks.forEach(m=>{if(m.position.distanceTo(gate.position)<m.userData.r+25)m.position.addScaledVector(r,m.userData.r+60);});
 }
-placeGate();
 
-// GREEN PHONE EDIT: v2 tilt now uses the same deviceorientation mapping as MobbyHill
-// landscape uses beta for left and right, gamma for forward and back, sign follows the screen
+// GREEN PHONE EDIT: tilt, same deviceorientation mapping as MobbyHill
 let tRaw=null,tZero=null;
 const isIOS=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function';
 function onOri(e){
@@ -203,177 +346,304 @@ function recenter(){if(tRaw)tZero={t:tRaw.t,fb:tRaw.fb};}
 function tiltInput(){
   if(!tRaw||!tZero)return null;
   const dz=(v,d)=>Math.abs(v)<d?0:v-Math.sign(v)*d;
-  const turn=clamp(dz(tRaw.t-tZero.t,2)/25*S.sens,-1,1);
-  const fwd=clamp(dz(tRaw.fb-tZero.fb,3)/18*S.sens,-1,1);
-  return {turn:turn,fwd:fwd};
+  return {turn:clamp(dz(tRaw.t-tZero.t,2)/25*S.sens,-1,1),fwd:clamp(dz(tRaw.fb-tZero.fb,3)/18*S.sens,-1,1)};
 }
-// GREEN PHONE EDIT: buttons, keyboard, throttle slider
-const keys={up:0,dn:0,lf:0,rt:0,thUp:0,thDn:0};
-document.querySelectorAll('.pad .b').forEach(b=>{
-  const k=b.dataset.k;
-  const on=e=>{e.preventDefault();keys[k]=1;b.classList.add('on');try{b.setPointerCapture(e.pointerId);}catch(_){}};
-  const off=()=>{keys[k]=0;b.classList.remove('on');};
-  b.addEventListener('pointerdown',on);
-  b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
-});
-const keyMap={ArrowUp:'up',ArrowDown:'dn',ArrowLeft:'lf',ArrowRight:'rt',w:'thUp',s:'thDn',W:'thUp',S:'thDn'};
+
+// GREEN PHONE EDIT: buttons, fire button, keyboard, throttle slider
+const keys={up:0,dn:0,lf:0,rt:0,thUp:0,thDn:0,fire:0};
+function holdBtn(el,k){
+  const on=e=>{e.preventDefault();keys[k]=1;el.classList.add('on');try{el.setPointerCapture(e.pointerId);}catch(_){}};
+  const off=()=>{keys[k]=0;el.classList.remove('on');};
+  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);el.addEventListener('pointercancel',off);el.addEventListener('lostpointercapture',off);
+}
+document.querySelectorAll('.pad .b').forEach(b=>holdBtn(b,b.dataset.k));
+holdBtn($('fireBtn'),'fire');
+const keyMap={ArrowUp:'up',ArrowDown:'dn',ArrowLeft:'lf',ArrowRight:'rt',w:'thUp',s:'thDn',W:'thUp',S:'thDn',' ':'fire'};
 addEventListener('keydown',e=>{if(keyMap[e.key]){keys[keyMap[e.key]]=1;e.preventDefault();}});
 addEventListener('keyup',e=>{if(keyMap[e.key])keys[keyMap[e.key]]=0;});
-
 const slider=$('slider'),fill=$('fill');
-function setFromSlider(e){
-  const r=slider.getBoundingClientRect();
-  throttle=clamp(1-(e.clientY-r.top)/r.height,0,1);
-}
+function setFromSlider(e){const r=slider.getBoundingClientRect();throttle=clamp(1-(e.clientY-r.top)/r.height,0,1);}
 slider.addEventListener('pointerdown',e=>{e.preventDefault();try{slider.setPointerCapture(e.pointerId);}catch(_){}setFromSlider(e);});
 slider.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')setFromSlider(e);});
 
-// GREEN PHONE EDIT: settings overlay wiring
-let running=false,started=false;
+// GREEN PHONE EDIT: landing screen ship picker
+let mode='menu',running=false,started=false;
+function bar(label,v){return '<div class="stat"><b>'+label+'</b><div class="bar"><i style="width:'+Math.round(clamp(v,0.05,1)*100)+'%"></i></div></div>';}
+function paintMenu(){
+  const sb=$('ships');sb.innerHTML='';
+  SHIPS.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;if(i===S.ship)b.className='sel';b.addEventListener('click',()=>{S.ship=i;saveS();SH=SHIPS[i];setShip(i);paintMenu();});sb.appendChild(b);});
+  const s=SHIPS[S.ship];
+  $('shipName').textContent=s.name;$('shipPerk').textContent=s.perk;
+  $('stats').innerHTML=bar('Speed',s.speed/175)+bar('Turning',s.turn/2)+bar('Firepower',s.dmg*s.rate/170)+bar('Fire rate',s.rate/16)+bar('Cooling',(s.cool/s.heat)/28);
+  $('best').textContent=S.best?('Best score '+S.best):'';
+}
 function paintSettings(){
-  document.querySelectorAll('.seg').forEach(seg=>{
-    const opt=seg.dataset.opt;
-    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',String(S[opt])===b.dataset.v));
-  });
+  document.querySelectorAll('.seg').forEach(seg=>{const opt=seg.dataset.opt;seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',String(S[opt])===b.dataset.v));});
   $('sens').value=S.sens;
-  const turnTilt=S.steer==='tilt';
-  const pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt';
+  const turnTilt=S.steer==='tilt',pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt';
   document.querySelector('.b.lf').style.display=turnTilt?'none':'flex';
   document.querySelector('.b.rt').style.display=turnTilt?'none':'flex';
   document.querySelector('.b.up').style.display=pitchTilt?'none':'flex';
   document.querySelector('.b.dn').style.display=pitchTilt?'none':'flex';
-  slider.style.display=S.throttle==='slider'?'block':'none';
+  slider.style.visibility=S.throttle==='slider'?'visible':'hidden';
+  $('firewrap').style.right=S.throttle==='slider'?'92px':'14px';
   $('recenterBtn').style.display=(S.steer==='tilt'||S.throttle==='tilt')?'block':'none';
 }
-document.querySelectorAll('.seg button').forEach(b=>{
-  b.addEventListener('click',()=>{
-    const opt=b.parentElement.dataset.opt;let v=b.dataset.v;
-    if(v==='true')v=true;else if(v==='false')v=false;
-    S[opt]=v;saveS();paintSettings();
-  });
-});
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+  const opt=b.parentElement.dataset.opt;let v=b.dataset.v;if(v==='true')v=true;else if(v==='false')v=false;
+  S[opt]=v;saveS();paintSettings();
+}));
 $('sens').addEventListener('input',e=>{S.sens=parseFloat(e.target.value);saveS();});
-paintSettings();
 
-$('goBtn').addEventListener('click',async()=>{
+function resetRun(){
+  pos.set(0,0,0);vel.set(0,0,0);q.identity();speed=0;throttle=0.35;pitchRate=yawRate=bank=0;
+  heat=0;overheat=false;score=0;gates=0;hitsTaken=0;kills=0;
+  bolts.forEach(b=>{b.life=0;b.m.visible=false;});
+  foes.forEach(f=>{f.alive=false;f.m.visible=false;f.respawn=rnd(2,5);});
+  rocks.forEach(m=>{if(m.position.length()<70)m.position.z-=220;m.userData.hp=m.userData.maxhp;});
+  placeGate();
+}
+$('launchBtn').addEventListener('click',async()=>{
   try{if(isIOS)await DeviceOrientationEvent.requestPermission();}catch(e){}
-  if(!started){
-    try{await document.documentElement.requestFullscreen();}catch(e){}
-    try{await screen.orientation.lock('landscape');}catch(e){}
-    started=true;
-  }
-  $('overlay').style.display='none';
-  $('title').textContent='Paused';$('goBtn').textContent='Resume';
-  running=true;last=performance.now();
+  if(!started){try{await document.documentElement.requestFullscreen();}catch(e){}try{await screen.orientation.lock('landscape');}catch(e){}started=true;}
+  SH=SHIPS[S.ship];setShip(S.ship);resetRun();
+  mode='play';running=true;document.body.classList.add('playing');
+  document.querySelector('.topbtns').style.display='flex';
   setTimeout(recenter,350);
+  toast('Hold FIRE to shoot. Watch the barrel heat.',3);
 });
-$('setBtn').addEventListener('click',()=>{running=false;$('overlay').style.display='flex';});
+function openSettings(inGame){
+  running=false;$('settings').style.display='flex';
+  $('setTitle').textContent=inGame?'Paused':'Controls';
+  $('toMenuBtn').style.display=inGame?'block':'none';
+  $('closeSetBtn').textContent=inGame?'Resume':'Done';
+}
+$('ctrlBtn').addEventListener('click',()=>openSettings(false));
+$('pauseBtn').addEventListener('click',()=>openSettings(true));
+$('closeSetBtn').addEventListener('click',()=>{$('settings').style.display='none';if(mode==='play'){running=true;last=performance.now();}});
+$('toMenuBtn').addEventListener('click',()=>{
+  $('settings').style.display='none';mode='menu';running=false;document.body.classList.remove('playing');
+  document.querySelector('.topbtns').style.display='none';
+  if(score>S.best){S.best=score;saveS();}
+  resetRun();foes.forEach(f=>{f.m.visible=false;});paintMenu();
+});
 $('recenterBtn').addEventListener('click',recenter);
-
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 
-// GREEN PHONE EDIT: main loop
-const hud=$('hud'),arrow=$('arrow'),flash=$('flash');
-let last=performance.now();
-const fwdV=new THREE.Vector3(),camOff=new THREE.Vector3(),tmp=new THREE.Vector3();
-camera.position.set(0,2.4,9);
+let toastT=0;
+function toast(t,s){const el=$('toast');el.textContent=t;el.style.opacity=1;toastT=s||2;}
 
+// GREEN PHONE EDIT: hit test for a laser segment against a sphere
+function segHit(a,b,c,r){
+  tmp.copy(b).sub(a);const len2=tmp.lengthSq();
+  let t=len2>0?tmp2.copy(c).sub(a).dot(tmp)/len2:0;t=clamp(t,0,1);
+  tmp2.copy(a).addScaledVector(tmp,t);
+  return tmp2.distanceToSquared(c)<r*r;
+}
+function killRock(m){
+  boom(m.position,m.userData.col,m.userData.r,Math.min(14,4+Math.round(m.userData.r/2)));
+  score+=Math.round(m.userData.r*2);
+  const d=new THREE.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize();
+  m.position.copy(pos).addScaledVector(d,FIELD*0.95);
+  m.userData.hp=m.userData.maxhp;
+}
+function spawnFoe(f){
+  const d=new THREE.Vector3(rnd(-1,1),rnd(-0.5,0.5),rnd(-1,1)).normalize();
+  f.m.position.copy(pos).addScaledVector(d,rnd(450,650));
+  mat4.lookAt(f.m.position,pos,AY);f.q.setFromRotationMatrix(mat4);f.m.quaternion.copy(f.q);
+  f.alive=true;f.hp=60;f.m.visible=true;f.cool=rnd(1,2);f.burst=0;f.wT=0;
+}
+
+const hud=$("hud");
+// GREEN PHONE EDIT: main game step
 function step(dt){
   const tilt=tiltInput();
   let turn=0,pitch=0;
-  const turnTilt=S.steer==='tilt'&&tilt;
-  const pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt'&&tilt;
-  if(turnTilt)turn=tilt.turn;
+  if(S.steer==='tilt'&&tilt)turn=tilt.turn;
   turn+=keys.rt-keys.lf;
-  if(pitchTilt)pitch=-tilt.fwd;
+  if(S.steer==='tilt'&&S.throttle!=='tilt'&&tilt)pitch=-tilt.fwd;
   pitch+=keys.up-keys.dn;
-  if(S.invTurn)turn=-turn;
-  if(S.invPitch)pitch=-pitch;
+  if(S.invTurn)turn=-turn;if(S.invPitch)pitch=-pitch;
   turn=clamp(turn,-1,1);pitch=clamp(pitch,-1,1);
-
   if(S.throttle==='tilt'&&tilt)throttle=clamp(0.35+tilt.fwd*0.65,0,1);
   if(keys.thUp)throttle=clamp(throttle+dt*0.6,0,1);
   if(keys.thDn)throttle=clamp(throttle-dt*0.6,0,1);
 
   const k=1-Math.exp(-dt*5);
-  pitchRate+=(pitch*1.5-pitchRate)*k;
-  yawRate+=(-turn*1.35-yawRate)*k;
+  pitchRate+=(pitch*SH.pitch-pitchRate)*k;
+  yawRate+=(-turn*SH.turn-yawRate)*k;
   q.multiply(tmpQ.setFromAxisAngle(AX,pitchRate*dt));
   q.multiply(tmpQ.setFromAxisAngle(AY,yawRate*dt));
   q.normalize();
-
-  speed+=(throttle*MAXSPEED-speed)*(1-Math.exp(-dt*1.4));
+  speed+=(throttle*SH.speed-speed)*(1-Math.exp(-dt*1.4));
   fwdV.set(0,0,-1).applyQuaternion(q);
   vel.lerp(tmp.copy(fwdV).multiplyScalar(speed),1-Math.exp(-dt*2.2));
   pos.addScaledVector(vel,dt);
-
   bank+=(-turn*0.75-bank)*k;
   ship.position.copy(pos);ship.quaternion.copy(q);
-  shipMesh.rotation.z=bank;shipMesh.rotation.x=pitchRate*0.12;
-  shipMesh.userData.engs.forEach(g=>{g.scale.set(1,0.3+throttle*2.2,1);g.position.z=1.95+(0.3+throttle*2.2)*0.5;});
+  shipMesh.rotation.set(pitchRate*0.12,0,bank);
+  shipMesh.userData.engs.forEach(e=>{const s=0.3+throttle*2.2;e.m.scale.set(1,s,1);e.m.position.z=e.z+s*0.5;});
 
-  // GREEN PHONE EDIT: rocks wrap around the ship so the field never ends
+  // GREEN PHONE EDIT: laser with barrel heat, no ammo limit
+  fireCool-=dt;
+  if(keys.fire&&!overheat&&fireCool<=0){
+    fireCool=1/SH.rate;
+    const g=SH.guns[barrel%SH.guns.length];barrel++;
+    tmp2.set(g[0],g[1],g[2]).applyQuaternion(q).add(pos);
+    shoot(tmp2,fwdV,320,false,SH.dmg,vel);
+    heat+=SH.heat;
+    if(heat>=1){heat=1;overheat=true;toast('OVERHEATED',1.2);}
+  }else{
+    heat=Math.max(0,heat-SH.cool*dt*(keys.fire?0.6:1));
+  }
+  if(overheat&&heat<0.3)overheat=false;
+
+  // GREEN PHONE EDIT: asteroids wrap, spin, bump the ship
   for(const m of rocks){
-    for(const a of ['x','y','z']){
-      const d=m.position[a]-pos[a];
-      if(d>FIELD)m.position[a]-=FIELD*2;else if(d<-FIELD)m.position[a]+=FIELD*2;
-    }
+    for(const a of ['x','y','z']){const d=m.position[a]-pos[a];if(d>FIELD)m.position[a]-=FIELD*2;else if(d<-FIELD)m.position[a]+=FIELD*2;}
     m.rotation.x+=m.userData.spin.x*dt;m.rotation.y+=m.userData.spin.y*dt;
+    if(m.userData.hitT>0){m.userData.hitT-=dt;if(m.userData.hitT<=0)m.children[1].material.color.setHex(m.userData.col);}
     const dist=m.position.distanceTo(pos),min=m.userData.r+1.8;
     if(dist<min){
       const n=tmp.copy(pos).sub(m.position).normalize();
       pos.copy(m.position).addScaledVector(n,min+0.1);
       const vn=vel.dot(n);if(vn<0)vel.addScaledVector(n,-1.6*vn);
-      speed*=0.35;shake=0.6;flash.style.opacity=0.35;setTimeout(()=>flash.style.opacity=0,120);
+      speed*=0.35;shake=0.6;hitFlash();
     }
   }
-  const p=dgeo.attributes.position.array;
-  for(let i=0;i<p.length;i+=3){
-    for(let j=0;j<3;j++){
-      const c=j===0?pos.x:j===1?pos.y:pos.z;
-      const d=p[i+j]-c;
-      if(d>DUST)p[i+j]-=DUST*2;else if(d<-DUST)p[i+j]+=DUST*2;
+
+  // GREEN PHONE EDIT: enemy ships chase, circle and shoot
+  for(const f of foes){
+    if(!f.alive){f.respawn-=dt;if(f.respawn<=0&&mode==='play')spawnFoe(f);continue;}
+    const fp=f.m.position;
+    const toP=tmp.copy(pos).sub(fp);const dist=toP.length();
+    f.wT-=dt;if(f.wT<=0){f.wT=rnd(2,4);f.wander.set(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(rnd(40,90));}
+    const target=tmp2.copy(pos).add(f.wander);
+    if(dist<45)target.copy(fp).add(toP.clone().multiplyScalar(-3)).add(f.wander);
+    if(dist>1200){f.alive=false;f.m.visible=false;f.respawn=1;continue;}
+    mat4.lookAt(fp,target,AY);tmpQ.setFromRotationMatrix(mat4);
+    f.q.rotateTowards(tmpQ,1.1*dt);
+    f.m.quaternion.copy(f.q);
+    const ff=new THREE.Vector3(0,0,-1).applyQuaternion(f.q);
+    fp.addScaledVector(ff,(dist>250?95:70)*dt);
+    if(f.hitT>0){f.hitT-=dt;}
+    f.cool-=dt;
+    const aim=ff.dot(toP.normalize());
+    if(f.cool<=0&&dist<380&&aim>0.94){
+      shoot(tmp.copy(fp).addScaledVector(ff,3),ff,200,true,1,null);
+      f.burst++;
+      if(f.burst>=4){f.burst=0;f.cool=rnd(1.4,2.6);}else f.cool=0.13;
     }
+  }
+
+  // GREEN PHONE EDIT: move lasers and check hits
+  const a=new THREE.Vector3();
+  for(const b of bolts){
+    if(b.life<=0)continue;
+    b.life-=dt;if(b.life<=0){b.m.visible=false;continue;}
+    a.copy(b.m.position);b.m.position.addScaledVector(b.v,dt);
+    const p=b.m.position;let hit=false;
+    if(b.foe){
+      if(segHit(a,p,pos,2.4)){hit=true;hitsTaken++;shake=0.4;hitFlash();}
+    }else{
+      for(const m of rocks){
+        if(Math.abs(m.position.x-p.x)>m.userData.r+20)continue;
+        if(segHit(a,p,m.position,m.userData.r)){
+          hit=true;m.userData.hp-=b.dmg;m.userData.hitT=0.07;m.children[1].material.color.setHex(0xc8362b);
+          if(m.userData.hp<=0)killRock(m);break;
+        }
+      }
+      if(!hit)for(const f of foes){
+        if(!f.alive)continue;
+        if(segHit(a,p,f.m.position,3)){
+          hit=true;f.hp-=b.dmg;boom(p,f.col,1,1);
+          if(f.hp<=0){boom(f.m.position,f.col,8,16);f.alive=false;f.m.visible=false;f.respawn=rnd(3,6);score+=150;kills++;toast('Enemy down',1);}
+          break;
+        }
+      }
+    }
+    if(hit){b.life=0;b.m.visible=false;}
+  }
+
+  // GREEN PHONE EDIT: debris and dust
+  for(const d of debris){
+    if(d.life<=0)continue;d.life-=dt;
+    if(d.life<=0){d.m.visible=false;continue;}
+    d.m.position.addScaledVector(d.v,dt);d.v.multiplyScalar(1-dt*0.8);
+    d.m.rotation.x+=d.spin.x*dt;d.m.rotation.y+=d.spin.y*dt;
+  }
+  const dp=dgeo.attributes.position.array;
+  for(let i=0;i<dp.length;i+=3){
+    for(let j=0;j<3;j++){const c=j===0?pos.x:j===1?pos.y:pos.z;const d=dp[i+j]-c;if(d>DUST)dp[i+j]-=DUST*2;else if(d<-DUST)dp[i+j]+=DUST*2;}
   }
   dgeo.attributes.position.needsUpdate=true;
 
   gate.rotation.z+=dt*0.5;
-  if(gate.position.distanceTo(pos)<10.5){gates++;placeGate();}
-  else if(gate.position.distanceTo(pos)>1100)placeGate();
+  const gd=gate.position.distanceTo(pos);
+  if(gd<10.5){gates++;score+=50;placeGate();toast('Ring +50',1);}
+  else if(gd>1100)placeGate();
 
-  // GREEN PHONE EDIT: chase camera follows full 3D orientation
-  camOff.set(0,1.9,6.5+speed*0.015).applyQuaternion(q);
+  // GREEN PHONE EDIT: chase camera
+  camOff.set(0,2.9,8.5+speed*0.015).applyQuaternion(q);
   const ck=1-Math.exp(-dt*6);
   camera.position.lerp(tmp.copy(pos).add(camOff),ck);
-  const look=q.clone().multiply(tmpQ.setFromAxisAngle(AX,-0.1));
-  camera.quaternion.slerp(look,ck);
-  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}
-  camera.fov=68+speed*0.12;camera.updateProjectionMatrix();
+  camera.quaternion.slerp(q.clone().multiply(tmpQ.setFromAxisAngle(AX,-0.06)),ck);
+  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=rnd(-.5,.5)*shake;camera.position.y+=rnd(-.5,.5)*shake;}
+  camera.fov=68+speed*0.1;camera.updateProjectionMatrix();
 
   fill.style.height=(throttle*100)+'%';
-  const gd=gate.position.distanceTo(pos);
-  hud.innerHTML='Speed '+Math.round(speed)+'<br>Throttle '+Math.round(throttle*100)+'%<br>Rings '+gates+'<br>Next ring '+Math.round(gd)+'m'+(S.steer==='tilt'&&!tRaw?'<br>No tilt sensor yet':'');
+  const hf=$('heatFill');hf.style.width=(heat*100)+'%';hf.style.background=overheat?'#c8362b':heat>0.7?'#c27a12':'#f2c230';
+  $('heatLbl').textContent=overheat?'COOLING DOWN':'BARREL HEAT';
+  hud.innerHTML=SH.name+'<br>Speed '+Math.round(speed)+'<br>Score '+score+'<br>Kills '+kills+'<br>Hits taken '+hitsTaken+(S.steer==='tilt'&&!tRaw?'<br>No tilt sensor yet':'');
 
-  // GREEN PHONE EDIT: edge arrow points to the next ring when it is off screen
-  const v=gate.position.clone().project(camera);
-  const behind=tmp.copy(gate.position).sub(camera.position).dot(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion))<0;
+  // GREEN PHONE EDIT: crosshair and edge arrows
+  tmp.copy(pos).addScaledVector(fwdV,140).project(camera);
+  const cr=$('cross');cr.style.display='block';cr.style.left=((tmp.x+1)/2*innerWidth)+'px';cr.style.top=((1-tmp.y)/2*innerHeight)+'px';
+  edgeArrow($('arrowRing'),gate.position);
+  let near=null,nd=1e9;foes.forEach(f=>{if(f.alive){const d=f.m.position.distanceTo(pos);if(d<nd){nd=d;near=f;}}});
+  if(near)edgeArrow($('arrowFoe'),near.m.position);else $('arrowFoe').style.display='none';
+}
+function hitFlash(){const fl=$('flash');fl.style.opacity=0.3;setTimeout(()=>fl.style.opacity=0,110);}
+const camFwd=new THREE.Vector3();
+function edgeArrow(el,wp){
+  const v=wp.clone().project(camera);
+  camFwd.set(0,0,-1).applyQuaternion(camera.quaternion);
+  const behind=tmp.copy(wp).sub(camera.position).dot(camFwd)<0;
   if(behind||Math.abs(v.x)>0.95||Math.abs(v.y)>0.95){
     let x=v.x,y=v.y;if(behind){x=-x;y=-y;}
-    const ang=Math.atan2(x,y);
-    const R=Math.min(innerWidth,innerHeight)*0.42;
-    arrow.style.display='block';
-    arrow.style.left=(innerWidth/2+Math.sin(ang)*R-11)+'px';
-    arrow.style.top=(innerHeight/2-Math.cos(ang)*R-11)+'px';
-    arrow.style.transform='rotate('+ang+'rad)';
-  }else arrow.style.display='none';
+    const ang=Math.atan2(x,y),R=Math.min(innerWidth,innerHeight)*0.42;
+    el.style.display='block';
+    el.style.left=(innerWidth/2+Math.sin(ang)*R-10)+'px';
+    el.style.top=(innerHeight/2-Math.cos(ang)*R-10)+'px';
+    el.style.transform='rotate('+ang+'rad)';
+  }else el.style.display='none';
 }
 
+// GREEN PHONE EDIT: landing screen camera slowly orbits the chosen ship
+let menuT=0;
+function menuStep(dt){
+  menuT+=dt;
+  ship.position.set(0,0,0);ship.quaternion.identity();
+  shipMesh.rotation.set(Math.sin(menuT*0.7)*0.08,menuT*0.45,Math.sin(menuT*0.9)*0.12);
+  shipMesh.userData.engs.forEach(e=>{const s=0.8+Math.sin(menuT*6)*0.15;e.m.scale.set(1,s,1);e.m.position.z=e.z+s*0.5;});
+  const wide=innerWidth>innerHeight;
+  camera.position.set(wide?-4.2:0,2.4,wide?9:11);
+  camera.lookAt(wide?-4.2:0,wide?0:-1.6,0);
+  camera.fov=55;camera.updateProjectionMatrix();
+  for(const m of rocks){m.rotation.x+=m.userData.spin.x*dt;m.rotation.y+=m.userData.spin.y*dt;}
+  sky.rotation.y+=dt*0.01;
+  $('cross').style.display='none';$('arrowRing').style.display='none';$('arrowFoe').style.display='none';
+}
+
+let last=performance.now();
 function loop(now){
   const dt=Math.min(0.05,(now-last)/1000);last=now;
-  if(running)step(dt);
+  if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').style.opacity=0;}
+  if(mode==='menu')menuStep(dt);else if(running)step(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(loop);
 }
+setShip(S.ship);paintMenu();paintSettings();placeGate();
 requestAnimationFrame(loop);
 </script>
 </body>
