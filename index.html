@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v11 points scores at the live Railway server. v10 added online scores with callsigns and a leaderboard. v9 added Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v12 Story follows the Starwake storyline. v11 pointed scores at the live Railway server. v10 added online scores with callsigns and a leaderboard. v9 added Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -602,38 +602,39 @@ function setFromSlider(e){const r=slider.getBoundingClientRect();throttle=clamp(
 slider.addEventListener('pointerdown',e=>{e.preventDefault();try{slider.setPointerCapture(e.pointerId);}catch(_){}setFromSlider(e);});
 slider.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')setFromSlider(e);});
 
-// GREEN PHONE EDIT: v9 story campaign. the Verdant Wing, a green squadron, against the Red Choir raiders
+// GREEN PHONE EDIT: v9 story campaign, rewritten in v12 to follow Starwake
 const STORY=[
-  {t:'First Light',map:'belt',mode:'free',
-   b:'You are Seven, the newest pilot in the Verdant Wing. The belt outpost needs a clear lane before the supply barges come through. Show the flight leads you can hit what you aim at.',
-   g:'Break 8 asteroids',done:()=>stat.rocks>=8,prog:()=>'Asteroids '+stat.rocks+'/8',d:'Lane is clear. The flight leads noticed.'},
-  {t:'Ring Run',map:'belt',mode:'free',
-   b:'Navigation beacons are up across the belt. Fly the course and prove you can thread a needle at speed.',
-   g:'Fly through 5 rings',done:()=>gates>=5,prog:()=>'Rings '+gates+'/5',d:'Clean lines. The Hornet is yours to fly now.',unlock:1},
-  {t:'Contact',map:'belt',mode:'free',
-   b:'Red fighters slipped into the belt overnight. Nobody knows who sent them yet. Drive them out.',
-   g:'Shoot down 4 fighters',done:()=>kills>=4,prog:()=>'Fighters '+kills+'/4',d:'Wreckage carries a red choir sigil. Command calls them the Red Choir.'},
-  {t:'The Carrier',map:'scrap',mode:'hunt',
-   b:'The fighters come from a carrier hiding in the scrapyard. It is slow, it bites back, and it keeps launching. Bring it down.',
-   g:'Destroy the mothership',done:()=>stat.ms>=1,prog:()=>'Motherships '+stat.ms+'/1',d:'Carrier down. Engineering hands you the Ox, built for this work.',unlock:2},
-  {t:'Cold Trail',map:'ice',mode:'fuel',
-   b:'A damaged Choir scout fled into the ice field. Follow its trail. Fuel is thin out there, so grab every pod you see.',
-   g:'Travel 3 km',done:()=>farthest>=3000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/3 km',fail:'Out of fuel short of the trail.',d:'The trail ends at a buried relay. The Choir has been listening.'},
-  {t:'Speeder Trials',map:'ice',mode:'hover',
-   b:'The relay sits under the ice. Only speeders can reach it, so the Wing runs trials on the frozen course first.',
-   g:'Finish 3 laps',done:()=>false,hover:999,d:'You qualified. The Mantis is cleared for you.',unlock:3},
-  {t:'Hold the Line',map:'belt',mode:'zone',
-   b:'The Choir moves on the belt stations in force. You and two wingmen hold three zones. Mine the rocks and build outposts if you can.',
-   g:'Win the territory battle',done:()=>false,fail:'The Choir took the belt.',d:'The belt holds. The Choir pulls back to the scrapyard.'},
-  {t:'Scrap Run',map:'scrap',mode:'hover',
-   b:'A courier route runs through the old wreck yards. Run it fast enough and the Choir never sees you pass.',
-   g:'Finish 3 laps under 2:30',done:()=>false,hover:150,fail:'Too slow. The Choir spotted the run.',d:'Delivered. The Furnace is unlocked.',unlock:4},
-  {t:'Long Way Home',map:'scrap',mode:'fuel',
-   b:'Your squadron got scattered. Fly home through Choir space on whatever fuel you can find.',
-   g:'Travel 6 km',done:()=>farthest>=6000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/6 km',fail:'Tank empty. Rescue drags you home.',d:'Home. Intel points to the Choir flagship in the ice.'},
-  {t:'The Red Choir',map:'ice',mode:'hunt',
-   b:'Two Choir carriers guard the ice. Break them both and the raids end. The whole Wing is watching.',
-   g:'Destroy 2 motherships',done:()=>stat.ms>=2,prog:()=>'Motherships '+stat.ms+'/2',d:'Both carriers down. The Red Choir goes quiet. Welcome to the Wing for good, Seven.'}
+  // GREEN PHONE EDIT: v12 campaign now follows the Starwake storyline
+  {t:'Haven Yard',map:'belt',mode:'free',
+   b:'The Wakeful, an ancient survey hull found adrift, has been refitted at Haven Yard. You fly her escort fighter. A grey growth called the Bloom has woken at the far corner of the chart, and it eats a little more of the galaxy every day. First, clear the launch lane and prove the guns work.',
+   g:'Break 8 asteroids',done:()=>stat.rocks>=8,prog:()=>'Asteroids '+stat.rocks+'/8',d:'Haven Yard clears the Wakeful for launch. The nearest Ossiri toll ring is marked on your chart.'},
+  {t:'The Toll Ring',map:'belt',mode:'free',
+   b:'Ossiri Toll Ring. State your cargo. State your credit. Do not state your feelings. Every hull flies the Ossiri rings before it may pass, so fly them clean.',
+   g:'Fly through 5 rings',done:()=>gates>=5,prog:()=>'Rings '+gates+'/5',d:'Your charter is active. Your credit is good. Your feelings remain unstated, as agreed. Haven Yard releases the Hornet to you.',unlock:1},
+  {t:'Grey Scouts',map:'belt',mode:'free',
+   b:'Scouts from the Bloom are probing the systems near its edge. They do not speak and they do not stop. Knock them out of the sky before they mark the Wakeful.',
+   g:'Shoot down 4 scouts',done:()=>kills>=4,prog:()=>'Scouts '+kills+'/4',d:'The scouts fall apart into grey dust. Old records aboard the Wakeful point to a weapon called the Lantern, broken into three parts and left in dead systems.'},
+  {t:'The Heart Coil',map:'scrap',mode:'fuel',
+   b:'A planet of black glass lies far out past the yards. One tower still hums. At its top, records say, a coil sits in a cradle as if someone meant to come back for it. Fuel is scarce on the way, so take every pod you find.',
+   g:'Travel 3 km',done:()=>farthest>=3000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/3 km',fail:'Your tanks ran dry short of the black glass world.',d:'The coil is in the hold. It is the Lantern\'s heart coil. Lantern parts: 1 of 3. Engineering hands you the Ox.',unlock:2},
+  {t:'Three Moons',map:'ice',mode:'hover',
+   b:'The Pell Syndicate never fights for free. Fleets are for winners, they say, so they have bet their fleet on whether you can win their ice course. They have also placed a small bet that you crash. Please do not.',
+   g:'Finish 3 laps',done:()=>false,hover:999,d:'A deal is a deal, even for the Pell. Especially for the Pell, this once. Their fleet flies with you. Allies: 1 of 3.'},
+  {t:'Something With a Face',map:'scrap',mode:'hunt',
+   b:'The Thrask of the Ninth Edge burn a poem before every duel. They complain the Bloom has no face to challenge. Now a Bloom carrier has come to their border, and it does. Show them how it is done.',
+   g:'Destroy the Bloom carrier',done:()=>stat.ms>=1,prog:()=>'Carriers '+stat.ms+'/1',d:'Tonight the Thrask burn a poem in your name. Tomorrow the Ninth Edge flies with you. Allies: 2 of 3. The Mantis is cleared for you.',unlock:3},
+  {t:'The Lantern\'s Eye',map:'ice',mode:'fuel',
+   b:'A ring of shattered habitats circles a cold star deep in the ice. In the deepest one, wrapped in a flag nobody can read, waits a lens the size of a door. It is a long, cold flight.',
+   g:'Travel 6 km',done:()=>farthest>=6000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/6 km',fail:'The cold took your fuel before the habitats came into view.',d:'The lens is aboard. It is the Lantern\'s eye. Lantern parts: 2 of 3.'},
+  {t:'War Charter',map:'belt',mode:'zone',
+   b:'The Bloom is eating customers, and the Ossiri oppose it in the strongest commercial terms available. Hold their three toll stations against the grey and they will sign a war charter. Mine the rocks and build outposts if you can.',
+   g:'Win the territory battle',done:()=>false,fail:'The grey took the toll stations. The Ossiri do not sign charters for losses.',d:'Paid in full. The Ossiri gunships are yours until the contract is complete, or until the Bloom is. Allies: 3 of 3. The Furnace is unlocked.',unlock:4},
+  {t:'The Vault',map:'scrap',mode:'hover',
+   b:'A voice loops on every channel in a language nobody has spoken for ten thousand years. Your linguist thinks it is saying not yet. Behind it a sealed vault opens to the Wakeful\'s old codes, but only for a moment. Race the canyon before it closes.',
+   g:'Finish 3 laps under 2:30',done:()=>false,hover:150,fail:'The vault sealed before you reached it. Run it again.',d:'Inside rests the Lantern\'s trigger. Lantern parts: 3 of 3. The Lantern wakes in your hold.'},
+  {t:'The Bloom Heart',map:'ice',mode:'hunt',
+   b:'Grey petals the size of moons turn toward you. With the whole Lantern and three allied fleets beside you, there is finally something here you can hurt. Two Bloom carriers guard the Heart. Break them both.',
+   g:'Destroy 2 Bloom carriers',done:()=>stat.ms>=2,prog:()=>'Carriers '+stat.ms+'/2',d:'The Lantern opens its eye inside the heart, and white light pours through the grey. Across the chart, petals curl and fall away like ash. Allied fleets fly home through stars that are slowly turning their old colors again.'}
 ];
 const UNLOCK_AT=[0,2,4,6,8];
 function shipUnlocked(i){return (S.story||0)>=UNLOCK_AT[i];}
@@ -718,7 +719,7 @@ function paintMenu(){
   $('stats').innerHTML=bar('Speed',s.speed/175)+bar('Turning',s.turn/2)+bar('Firepower',s.dmg*s.rate/170)+bar('Fire rate',s.rate/16)+bar('Cooling',(s.cool/s.heat)/28);
   document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('sel',b.dataset.m===S.mode));
   document.querySelectorAll('#maps button').forEach(b=>b.classList.toggle('sel',b.dataset.p===S.map));
-  $('modeDesc').textContent=S.mode==='story'?((S.story||0)>=STORY.length?'Campaign complete. Replay any mission.':'Ten missions with the Verdant Wing. Finish missions to unlock ships for Story.'):MODES[S.mode].d;
+  $('modeDesc').textContent=S.mode==='story'?((S.story||0)>=STORY.length?'Campaign complete. Replay any mission.':'The Starwake campaign. Find the three Lantern parts, win three allies, and end the Bloom. Finish missions to unlock ships for Story.'):MODES[S.mode].d;
   const bk=S.mode==='story'?0:S.bests[bestKey()];
   $('best').textContent=bk?('Best here: '+(S.mode==='fuel'?(bk/1000).toFixed(2)+' km':S.mode==='hover'?fmtT(bk):bk)):'';
 }
