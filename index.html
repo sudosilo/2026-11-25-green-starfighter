@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v6 adds Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v7 adds a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -94,11 +94,30 @@ body.playing.topbar .msbar{display:block}
 .lead.ms{border-color:#6a3d9a;width:22px;height:22px;margin:-11px 0 0 -11px}
 body.hovermode .firewrap{display:none}
 body.hovermode .slider{right:14px}
+/* GREEN PHONE EDIT: v7 cockpit overlay, canopy frame and dash, sits under the touch controls */
+.cockpit{position:fixed;inset:0;pointer-events:none;display:none}
+body.playing.cockpitview .cockpit{display:block}
+.cockpit svg{position:absolute;inset:0;width:100%;height:100%}
+.dash{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);transform:translateX(-50%);display:flex;gap:10px;font-size:12px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.dash div{background:#fff;border:2px solid var(--edge);border-radius:6px;padding:3px 8px;min-width:62px;text-align:center}
+.dash small{display:block;font-size:9px;color:var(--ink2)}
 </style>
 </head>
 <body>
+<div class="cockpit" id="cockpit">
+  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <g fill="none" stroke="#2e3338" stroke-width="2.5" vector-effect="non-scaling-stroke">
+      <path d="M0 22 L20 0" vector-effect="non-scaling-stroke"/><path d="M100 22 L80 0" vector-effect="non-scaling-stroke"/>
+      <path d="M0 6 L8 0" vector-effect="non-scaling-stroke" stroke-width="1.5"/><path d="M100 6 L92 0" vector-effect="non-scaling-stroke" stroke-width="1.5"/>
+    </g>
+    <path d="M0 100 L0 84 L26 77 L40 75 L60 75 L74 77 L100 84 L100 100 Z" fill="#eceae3" fill-opacity="0.92" stroke="#2e3338" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+    <path d="M40 75 L42 81 L58 81 L60 75" fill="none" stroke="#9d9a8f" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+  </svg>
+  <div class="dash"><div><small>SPEED</small><span id="dSpd">0</span></div><div><small>THROTTLE</small><span id="dThr">0%</span></div><div id="dHeatBox"><small>HEAT</small><span id="dHeat">0%</span></div></div>
+</div>
 <div class="hud play" id="hud"></div>
 <div class="topbtns play" style="display:none">
+  <button class="chip" id="viewBtn">Cockpit</button>
   <button class="chip" id="recenterBtn">Recenter</button>
   <button class="chip" id="pauseBtn">Pause</button>
 </div>
@@ -161,7 +180,7 @@ body.hovermode .slider{right:14px}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // GREEN PHONE EDIT: settings with safe storage
-const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
+const DEF={view:'chase',steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
 if(!S.bests)S.bests={};
@@ -644,6 +663,23 @@ $('toMenuBtn').addEventListener('click',()=>{if(S.mode==='free'||S.mode==='hunt'
 $('endMenuBtn').addEventListener('click',toMenu);
 $('againBtn').addEventListener('click',startRun);
 $('recenterBtn').addEventListener('click',recenter);
+// GREEN PHONE EDIT: v7 view toggle
+function paintView(){
+  const ck=S.view==='cockpit';
+  document.body.classList.toggle('cockpitview',ck);
+  $('viewBtn').textContent=ck?'Chase':'Cockpit';
+}
+$('viewBtn').addEventListener('click',()=>{S.view=S.view==='cockpit'?'chase':'cockpit';saveS();paintView();});
+paintView();
+function cockpitCam(baseQ,dt,rollAmt){
+  shipMesh.visible=false;
+  camera.position.copy(V(0,0.55,-0.7).applyQuaternion(baseQ).add(pos));
+  camera.quaternion.copy(baseQ).multiply(tmpQ.setFromAxisAngle(NZ,-rollAmt));
+  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=rnd(-.3,.3)*shake;camera.position.y+=rnd(-.3,.3)*shake;}
+  $('dSpd').textContent=Math.round(speed);$('dThr').textContent=Math.round(throttle*100)+'%';
+  $('dHeat').textContent=overheat?'HOT':Math.round(heat*100)+'%';
+  $('dHeatBox').style.display=S.mode==='hover'?'none':'block';
+}
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
 let toastT=0;
 function toast(t,s){const el=$('toast');el.textContent=t;el.style.opacity=1;toastT=s||2;}
@@ -1046,13 +1082,17 @@ function hoverStep(dt){
   ship.position.copy(pos);ship.quaternion.copy(q);
   shipMesh.rotation.set(0,0,bank);
   shipMesh.userData.engs.forEach(e=>{const s=0.3+throttle*2.2;e.m.scale.set(1,s,1);e.m.position.z=e.z+s*0.5;});
-  // GREEN PHONE EDIT: low chase camera
+  // GREEN PHONE EDIT: low chase camera, or cockpit view
+  if(S.view==='cockpit'){cockpitCam(q,dt,bank*0.4);camera.fov=72+speed*0.08;camera.updateProjectionMatrix();}
+  else{
+  shipMesh.visible=true;
   const cq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.1+slope*0.4,hv.yaw,0,'YXZ'));
   camOff.set(0,3.4,10+speed*0.012).applyQuaternion(cq);
   const want=tmp.copy(pos).add(camOff);const cg=H(want.x,want.z)+1.5;if(want.y<cg)want.y=cg;
   const ck=1-Math.exp(-dt*7);camera.position.lerp(want,ck);camera.quaternion.slerp(cq,ck);
   if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=rnd(-.5,.5)*shake;camera.position.y+=rnd(-.5,.5)*shake;}
   camera.fov=66+speed*0.12;camera.updateProjectionMatrix();
+  }
   fill.style.height=(throttle*100)+'%';
   hud.innerHTML='Hover race  '+SH.name+'<br>Speed '+Math.round(speed)+(off?'  OFF TRACK':'')+'<br>Lap '+hv.lap+' of '+HOVER.laps+'<br>Gate '+(hv.gate===0?HOVER.gateN:hv.gate)+' of '+HOVER.gateN+'<br>Time '+fmtT(hv.t)+(hv.best?'<br>Best lap '+fmtT(hv.best):'');
   const bk=S.bests['hover_'+S.map];
@@ -1186,13 +1226,17 @@ function step(dt){
     if(gd<10.5){gates++;score+=50;placeGate();toast('Ring +50',1);}else if(gd>1100)placeGate();
   }
 
-  // GREEN PHONE EDIT: chase camera
+  // GREEN PHONE EDIT: chase camera, or cockpit view
+  if(S.view==='cockpit'){cockpitCam(q,dt,bank*0.35);camera.fov=72+speed*0.08;camera.updateProjectionMatrix();}
+  else{
+  shipMesh.visible=true;
   camOff.set(0,2.9,8.5+speed*0.015).applyQuaternion(q);
   const ck=1-Math.exp(-dt*6);
   camera.position.lerp(tmp.copy(pos).add(camOff),ck);
   camera.quaternion.slerp(q.clone().multiply(tmpQ.setFromAxisAngle(AX,-0.06)),ck);
   if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=rnd(-.5,.5)*shake;camera.position.y+=rnd(-.5,.5)*shake;}
   camera.fov=68+speed*0.1;camera.updateProjectionMatrix();
+  }
 
   fill.style.height=(throttle*100)+'%';
   const hf=$('heatFill');hf.style.width=(heat*100)+'%';hf.style.background=overheat?'#c8362b':heat>0.7?'#c27a12':'#f2c230';
@@ -1240,7 +1284,7 @@ function edgeArrow(el,wp){
 // GREEN PHONE EDIT: landing screen camera slowly orbits the chosen ship
 let menuT=0;
 function menuStep(dt){
-  menuT+=dt;
+  menuT+=dt;shipMesh.visible=true;
   ship.position.set(0,0,0);ship.quaternion.identity();
   shipMesh.rotation.set(Math.sin(menuT*0.7)*0.08,menuT*0.45,Math.sin(menuT*0.9)*0.12);
   shipMesh.userData.engs.forEach(e=>{const s=0.8+Math.sin(menuT*6)*0.15;e.m.scale.set(1,s,1);e.m.position.z=e.z+s*0.5;});
