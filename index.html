@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v4 adds Mothership Hunt mode. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -41,24 +41,24 @@ body.playing .topbtns{display:flex}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 54px);transform:translateX(-50%);background:var(--yellow);border:2px solid #b58d12;border-radius:6px;padding:4px 12px;font-size:14px;font-weight:900;color:#3a2f05;opacity:0;transition:opacity .3s;pointer-events:none}
 
 /* GREEN PHONE EDIT: landing screen, panel on the left, live wireframe ship preview on the right */
-.menu{position:fixed;left:12px;top:12px;bottom:12px;width:min(400px,50vw);display:flex;flex-direction:column;background:rgba(236,234,227,.94);border:2px solid var(--edge);border-radius:12px;padding:12px 14px;box-shadow:0 6px 0 #b9b6ab;overflow:auto}
+.menu{position:fixed;left:10px;top:8px;bottom:8px;width:min(400px,50vw);display:flex;flex-direction:column;background:rgba(236,234,227,.94);border:2px solid var(--edge);border-radius:12px;padding:9px 12px;box-shadow:0 4px 0 #b9b6ab;overflow:auto}
 body.playing .menu{display:none}
-.logo{font-size:26px;font-weight:900;letter-spacing:1px;line-height:1}
+.logo{font-size:22px;font-weight:900;letter-spacing:1px;line-height:1}
 .logo span{color:var(--green)}
-.sub{font-size:12px;color:var(--ink2);margin:4px 0 10px}
-.ships{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
-.ships button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:8px 2px;font-size:13px;font-weight:900;color:var(--ink)}
+.sub{font-size:12px;color:var(--ink2);margin:3px 0 7px}
+.ships{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.ships button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:6px 2px;font-size:13px;font-weight:900;color:var(--ink)}
 .ships button.sel{background:#dcefdc;border-color:var(--green);color:#24552a}
-.shipname{font-size:20px;font-weight:900;color:#24552a;margin-top:10px}
-.perk{font-size:13px;color:var(--ink2);margin:2px 0 8px;min-height:34px}
-.stat{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;margin:4px 0}
+.shipname{font-size:17px;font-weight:900;color:#24552a;margin-top:6px}
+.perk{font-size:12px;color:var(--ink2);margin:1px 0 4px}
+.stat{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;margin:2px 0}
 .stat b{width:72px;font-weight:800}
 .stat .bar{flex:1;height:9px;background:#fff;border:1px solid var(--edge);border-radius:4px;overflow:hidden}
 .stat .bar i{display:block;height:100%;background:var(--green)}
-.mrow{display:flex;gap:8px;margin-top:auto;padding-top:12px}
-.mrow button{flex:1;border:2px solid var(--edge);background:#fff;border-radius:9px;padding:12px 6px;font-size:16px;font-weight:900;color:var(--ink)}
+.mrow{display:flex;gap:8px;margin-top:auto;padding-top:8px;flex:none}
+.mrow button{flex:1;border:2px solid var(--edge);background:#fff;border-radius:9px;padding:10px 6px;font-size:16px;font-weight:900;color:var(--ink)}
 .mrow button.go{background:var(--yellow);border-color:#b58d12;color:#3a2f05}
-.best{font-size:12px;font-weight:800;color:var(--ink2);margin-top:8px}
+.best{font-size:11px;font-weight:800;color:var(--ink2);margin-top:3px}
 @media (orientation:portrait){.menu{top:auto;width:auto;right:12px;max-height:62vh}}
 
 .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(238,240,236,.86);padding:16px;z-index:20}
@@ -69,6 +69,20 @@ body.playing .menu{display:none}
 .seg button{border:2px solid var(--edge);background:#fff;border-radius:7px;padding:7px 10px;font-size:13px;font-weight:800;color:var(--ink)}
 .seg button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
 input[type=range]{width:150px;accent-color:var(--blue)}
+/* GREEN PHONE EDIT: v4 mode picker and mothership health bar */
+.modesel{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:4px}
+.modesel button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:6px 4px;font-size:13px;font-weight:900;color:var(--ink)}
+.modesel button.sel{background:#e7ddf2;border-color:#6a3d9a;color:#3e2160}
+.modedesc{font-size:12px;color:var(--ink2);margin:2px 0 8px;line-height:1.3;flex:none}
+.msbar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 8px);width:min(340px,44vw);background:var(--panel);border:2px solid #6a3d9a;border-radius:8px;padding:3px 8px 5px;display:none;pointer-events:none}
+body.playing.hunt .msbar{display:block}
+.msbar .t{font-size:11px;font-weight:900;color:#3e2160;text-align:center}
+.msbar .bar{height:9px;background:#fff;border:1px solid var(--edge);border-radius:4px;overflow:hidden}
+.msbar .bar i{display:block;height:100%;width:100%;background:#6a3d9a}
+.arrow.ms{border-left-width:13px;border-right-width:13px;border-bottom:26px solid #6a3d9a}
+.toast{top:calc(env(safe-area-inset-top,0px) + 50px)}
+.lead{position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid var(--red);transform:rotate(45deg);pointer-events:none;display:none}
+.lead.ms{border-color:#6a3d9a;width:22px;height:22px;margin:-11px 0 0 -11px}
 </style>
 </head>
 <body>
@@ -91,13 +105,18 @@ input[type=range]{width:150px;accent-color:var(--blue)}
 </div>
 <div class="arrow" id="arrowRing"></div>
 <div class="arrow foe" id="arrowFoe"></div>
+<div class="arrow ms" id="arrowMs"></div>
+<div class="msbar" id="msbar"><div class="t" id="msLbl">MOTHERSHIP</div><div class="bar"><i id="msFill"></i></div></div>
 <div class="cross" id="cross"></div>
+<div class="lead" id="lead"></div>
 <div class="flash" id="flash"></div>
 <div class="toast" id="toast"></div>
 
 <div class="menu" id="menu">
   <div class="logo">POLYGON <span>STARFIGHTER</span></div>
-  <div class="sub">Pick a ship. Tilt or buttons to fly, hold FIRE to shoot.</div>
+  <div class="sub">Pick a mode and a ship. Tilt or buttons to fly, hold FIRE to shoot.</div>
+  <div class="modesel" id="modes"><button data-m="free">Free flight</button><button data-m="hunt">Mothership hunt</button></div>
+  <div class="modedesc" id="modeDesc"></div>
   <div class="ships" id="ships"></div>
   <div class="shipname" id="shipName"></div>
   <div class="perk" id="shipPerk"></div>
@@ -121,7 +140,7 @@ input[type=range]{width:150px;accent-color:var(--blue)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // GREEN PHONE EDIT: settings with safe storage
-const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,best:0};
+const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,best:0,mode:'free',bestHunt:0};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
 function saveS(){try{localStorage.setItem('pf_settings',JSON.stringify(S));}catch(e){}}
@@ -301,17 +320,132 @@ function boom(at,color,size,count){
 // GREEN PHONE EDIT: enemy ships, never green
 const FOE_COLORS=[[0xc8362b,0xf3c9c4],[0x2a62b0,0xcfe0f4],[0xc27a12,0xf6dca5]];
 function buildFoe(c){
-  const g=new THREE.Group();
+  const outer=new THREE.Group(),g=new THREE.Group();outer.add(g);outer.userData.inner=g;
   const b=new THREE.OctahedronGeometry(1);b.scale(1.1,0.7,2.2);g.add(W(b,c[0],c[1]));
   const w=new THREE.BoxGeometry(5.2,0.15,0.9);w.translate(0,0,0.6);g.add(W(w,c[0],c[1]));
   [-2.6,2.6].forEach(x=>{const p=new THREE.BoxGeometry(0.2,1.8,1.8);p.translate(x,0,0.6);g.add(W(p,c[0],c[1]));});
   const e=new THREE.CylinderGeometry(0.35,0.45,1,6);e.rotateX(Math.PI/2);e.translate(0,0,2.2);g.add(W(e,INK,c[1]));
-  return g;
+  return outer;
 }
 const foes=[];
-for(let i=0;i<4;i++){
+for(let i=0;i<8;i++){
   const m=buildFoe(FOE_COLORS[i%3]);m.visible=false;scene.add(m);
-  foes.push({m:m,alive:false,hp:0,q:new THREE.Quaternion(),respawn:rnd(1,4),cool:0,burst:0,wander:new THREE.Vector3(),wT:0,hitT:0,col:FOE_COLORS[i%3][0]});
+  foes.push({idx:i,m:m,st:'attack',stT:0,tax:new THREE.Vector3(0,1,0),trate:0,tbank:0,bank:0,vel:new THREE.Vector3(),alive:false,hp:0,q:new THREE.Quaternion(),respawn:rnd(1,4),cool:0,burst:0,wander:new THREE.Vector3(),wT:0,hitT:0,col:FOE_COLORS[i%3][0]});
+}
+
+// GREEN PHONE EDIT: v4 pick a committed maneuver. mostly flat banked turns, sometimes a climbing or diving turn
+function pickTurn(f){
+  const dir=Math.random()<0.5?-1:1;
+  if(Math.random()<0.65){f.tax.set(0,1,0);f.trate=dir*rnd(0.7,0.95);f.tbank=-dir*rnd(0.9,1.2);}
+  else{f.tax.set(Math.random()<0.5?0.8:-0.8,dir*0.6,0).normalize();f.trate=rnd(0.7,0.9);f.tbank=-dir*0.7;}
+}
+// GREEN PHONE EDIT: v4 mothership, big slow purple carrier that launches fighters
+const MS_LINE=0x6a3d9a,MS_FILL=0xe7ddf2;
+function buildMothership(){
+  const g=new THREE.Group(),add=(geo,fill)=>g.add(W(geo,MS_LINE,fill||MS_FILL));
+  const hull=new THREE.CylinderGeometry(9,11,60,6);hull.rotateX(Math.PI/2);add(hull,0xffffff);
+  const nose=new THREE.ConeGeometry(9,18,6);nose.rotateX(-Math.PI/2);nose.translate(0,0,-39);add(nose,0xffffff);
+  const br=new THREE.BoxGeometry(8,6,12);br.translate(0,10,10);add(br);
+  const tw=new THREE.BoxGeometry(3,5,3);tw.translate(0,15,12);add(tw);
+  [-15,15].forEach(x=>{
+    const pod=new THREE.BoxGeometry(6,8,34);pod.translate(x,0,4);add(pod);
+    const st=new THREE.BoxGeometry(6,1.5,6);st.translate(x>0?x-4:x+4,0,0);add(st);
+  });
+  const hg=new THREE.BoxGeometry(7,4,16);hg.translate(0,-11,12);add(hg,0xcbb8e0);
+  const eb=new THREE.CylinderGeometry(7,8,8,6);eb.rotateX(Math.PI/2);eb.translate(0,0,34);add(eb,0xcbb8e0);
+  const glows=[];
+  [[-4,0],[4,0],[0,4]].forEach(o=>{
+    const gl=new THREE.Mesh(new THREE.ConeGeometry(2,6,6),new THREE.MeshBasicMaterial({color:0xf2c230}));
+    gl.rotation.x=Math.PI/2;gl.position.set(o[0],o[1],41);g.add(gl);glows.push(gl);
+  });
+  const lines=[];g.traverse(o=>{if(o.isLineSegments)lines.push(o.material);});
+  g.userData={glows:glows,lines:lines};
+  return g;
+}
+const MS_SPHERES=[[0,0,-32,9],[0,0,-12,11],[0,0,10,12],[0,0,28,10],[-15,0,4,7],[15,0,4,7],[0,10,10,6]];
+const ms={m:buildMothership(),alive:false,hp:0,maxhp:1,q:new THREE.Quaternion(),wave:1,launchT:0,jinkT:0,jink:new THREE.Vector3(),boostT:0,hitT:0,nextT:0,
+  centers:MS_SPHERES.map(()=>new THREE.Vector3())};
+ms.m.visible=false;scene.add(ms.m);ms.vel=new THREE.Vector3();
+function msSpeed(){return 52+ms.wave*5;}
+function spawnMothership(){
+  const f=new THREE.Vector3(0,0,-1).applyQuaternion(q),r=new THREE.Vector3(1,0,0).applyQuaternion(q);
+  ms.m.position.copy(pos).addScaledVector(f,520).addScaledVector(r,rnd(-150,150));
+  ms.m.position.y+=rnd(-60,60);
+  ms.q.copy(q);ms.m.quaternion.copy(ms.q);
+  ms.maxhp=Math.round(1200*(1+0.35*(ms.wave-1)));ms.hp=ms.maxhp;
+  ms.alive=true;ms.m.visible=true;ms.launchT=2.5;ms.jinkT=0;ms.boostT=0;
+  rocks.forEach(m=>{if(m.position.distanceTo(ms.m.position)<m.userData.r+50)m.position.addScaledVector(r,m.userData.r+90);});
+  toast('Wave '+ms.wave+'. Take down the mothership',2.5);
+}
+function killMothership(){
+  ms.alive=false;
+  for(let i=0;i<5;i++){const c=ms.centers[i%ms.centers.length];boom(c,i%2?MS_LINE:0xc27a12,14,16);}
+  shake=0.8;score+=1000*ms.wave;
+  toast('MOTHERSHIP DOWN +'+(1000*ms.wave),3);
+  ms.m.visible=false;ms.wave++;ms.nextT=6;
+}
+function launchFighter(){
+  const f=foes.find(x=>!x.alive);if(!f)return;
+  const hp=new THREE.Vector3(0,-14,14).applyQuaternion(ms.q).add(ms.m.position);
+  f.m.position.copy(hp);f.q.copy(ms.q);f.m.quaternion.copy(f.q);
+  f.alive=true;f.hp=60;f.m.visible=true;f.cool=rnd(1.5,2.5);f.burst=0;f.wT=0;f.st='extend';f.stT=1.5;f.bank=0;
+}
+function stepMothership(dt){
+  if(!ms.alive){
+    if(ms.nextT>0){ms.nextT-=dt;if(ms.nextT<=0)spawnMothership();}
+    $('arrowMs').style.display='none';return;
+  }
+  const mp=ms.m.position,toP=tmp.copy(pos).sub(mp),dist=toP.length();
+  const mf=new THREE.Vector3(0,0,-1).applyQuaternion(ms.q);
+  const behind=toP.dot(mf)<0;
+  ms.jinkT-=dt;
+  if(ms.jinkT<=0){
+    ms.jinkT=rnd(2,3.5);
+    const r=new THREE.Vector3(1,0,0).applyQuaternion(ms.q),u=new THREE.Vector3(0,1,0).applyQuaternion(ms.q);
+    ms.jink.copy(r).multiplyScalar(rnd(-1,1)).addScaledVector(u,rnd(-0.6,0.6));
+    if(dist<350&&Math.random()<0.6)ms.boostT=rnd(1.2,2.2);
+  }
+  let target;
+  if(dist>900)target=pos.clone();
+  else if(dist<380)target=mp.clone().addScaledVector(toP.clone().normalize(),-200).addScaledVector(ms.jink,140);
+  else target=mp.clone().addScaledVector(mf,200).addScaledVector(ms.jink,160);
+  mat4.lookAt(mp,target,AY);tmpQ.setFromRotationMatrix(mat4);
+  ms.q.rotateTowards(tmpQ,0.45*dt);ms.m.quaternion.copy(ms.q);
+  if(ms.boostT>0)ms.boostT-=dt;
+  const sp=msSpeed()*(ms.boostT>0?1.5:1);
+  mp.addScaledVector(mf,sp*dt);ms.vel.copy(mf).multiplyScalar(sp);
+  ms.m.userData.glows.forEach(g=>g.scale.set(1,ms.boostT>0?1.8:1,1));
+  MS_SPHERES.forEach((o,i)=>ms.centers[i].set(o[0],o[1],o[2]).applyQuaternion(ms.q).add(mp));
+  if(ms.hitT>0){ms.hitT-=dt;if(ms.hitT<=0)ms.m.userData.lines.forEach(m=>m.color.setHex(MS_LINE));}
+  // GREEN PHONE EDIT: bump off the hull
+  MS_SPHERES.forEach((o,i)=>{
+    const c=ms.centers[i],min=o[3]+2;
+    if(c.distanceTo(pos)<min){
+      const n=tmp2.copy(pos).sub(c).normalize();pos.copy(c).addScaledVector(n,min+0.1);
+      const vn=vel.dot(n);if(vn<0)vel.addScaledVector(n,-1.6*vn);speed*=0.4;shake=0.5;hitFlash();
+    }
+  });
+  // GREEN PHONE EDIT: launch fighters, more each wave
+  ms.launchT-=dt;
+  const cap=2+ms.wave;
+  if(ms.launchT<=0){
+    ms.launchT=Math.max(3,7-ms.wave*0.6);
+    if(foes.filter(f=>f.alive).length<cap)launchFighter();
+  }
+  $('msFill').style.width=(ms.hp/ms.maxhp*100)+'%';
+  $('msLbl').textContent='MOTHERSHIP  WAVE '+ms.wave+'  '+Math.round(dist)+'m';
+  edgeArrow($('arrowMs'),mp);
+}
+function hitMothership(a,p,dmg){
+  for(let i=0;i<MS_SPHERES.length;i++){
+    if(segHit(a,p,ms.centers[i],MS_SPHERES[i][3])){
+      ms.hp-=dmg;ms.hitT=0.06;ms.m.userData.lines.forEach(m=>m.color.setHex(0xc8362b));
+      boom(p,MS_LINE,1,1);
+      if(ms.hp<=0)killMothership();
+      return true;
+    }
+  }
+  return false;
 }
 
 // GREEN PHONE EDIT: flight state
@@ -375,7 +509,10 @@ function paintMenu(){
   const s=SHIPS[S.ship];
   $('shipName').textContent=s.name;$('shipPerk').textContent=s.perk;
   $('stats').innerHTML=bar('Speed',s.speed/175)+bar('Turning',s.turn/2)+bar('Firepower',s.dmg*s.rate/170)+bar('Fire rate',s.rate/16)+bar('Cooling',(s.cool/s.heat)/28);
-  $('best').textContent=S.best?('Best score '+S.best):'';
+  $('best').textContent=S.mode==='hunt'?(S.bestHunt?('Best hunt score '+S.bestHunt):''):(S.best?('Best score '+S.best):'');
+  document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('sel',b.dataset.m===S.mode));
+  $('modeDesc').textContent=S.mode==='hunt'?'Chase a slow mothership that launches fast fighters. Wreck it to clear the wave.':'Fly the asteroid field, shoot rocks and fighters, fly through rings.';
+  ms.m.visible=false;
 }
 function paintSettings(){
   document.querySelectorAll('.seg').forEach(seg=>{const opt=seg.dataset.opt;seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',String(S[opt])===b.dataset.v));});
@@ -401,16 +538,19 @@ function resetRun(){
   bolts.forEach(b=>{b.life=0;b.m.visible=false;});
   foes.forEach(f=>{f.alive=false;f.m.visible=false;f.respawn=rnd(2,5);});
   rocks.forEach(m=>{if(m.position.length()<70)m.position.z-=220;m.userData.hp=m.userData.maxhp;});
+  ms.alive=false;ms.m.visible=false;ms.wave=1;ms.nextT=0;
+  gate.visible=S.mode!=='hunt';
   placeGate();
 }
 $('launchBtn').addEventListener('click',async()=>{
   try{if(isIOS)await DeviceOrientationEvent.requestPermission();}catch(e){}
   if(!started){try{await document.documentElement.requestFullscreen();}catch(e){}try{await screen.orientation.lock('landscape');}catch(e){}started=true;}
   SH=SHIPS[S.ship];setShip(S.ship);resetRun();
-  mode='play';running=true;document.body.classList.add('playing');
+  mode='play';running=true;document.body.classList.add('playing');document.body.classList.toggle('hunt',S.mode==='hunt');
+  if(S.mode==='hunt')spawnMothership();
   document.querySelector('.topbtns').style.display='flex';
   setTimeout(recenter,350);
-  toast('Hold FIRE to shoot. Watch the barrel heat.',3);
+  if(S.mode!=='hunt')toast('Hold FIRE to shoot. Watch the barrel heat.',3);
 });
 function openSettings(inGame){
   running=false;$('settings').style.display='flex';
@@ -424,7 +564,7 @@ $('closeSetBtn').addEventListener('click',()=>{$('settings').style.display='none
 $('toMenuBtn').addEventListener('click',()=>{
   $('settings').style.display='none';mode='menu';running=false;document.body.classList.remove('playing');
   document.querySelector('.topbtns').style.display='none';
-  if(score>S.best){S.best=score;saveS();}
+  if(S.mode==='hunt'){if(score>S.bestHunt){S.bestHunt=score;saveS();}}else if(score>S.best){S.best=score;saveS();}
   resetRun();foes.forEach(f=>{f.m.visible=false;});paintMenu();
 });
 $('recenterBtn').addEventListener('click',recenter);
@@ -451,7 +591,7 @@ function spawnFoe(f){
   const d=new THREE.Vector3(rnd(-1,1),rnd(-0.5,0.5),rnd(-1,1)).normalize();
   f.m.position.copy(pos).addScaledVector(d,rnd(450,650));
   mat4.lookAt(f.m.position,pos,AY);f.q.setFromRotationMatrix(mat4);f.m.quaternion.copy(f.q);
-  f.alive=true;f.hp=60;f.m.visible=true;f.cool=rnd(1,2);f.burst=0;f.wT=0;
+  f.alive=true;f.hp=60;f.m.visible=true;f.cool=rnd(1,2);f.burst=0;f.wT=0;f.st='attack';f.stT=rnd(4,6);f.bank=0;
 }
 
 const hud=$("hud");
@@ -514,27 +654,46 @@ function step(dt){
 
   // GREEN PHONE EDIT: enemy ships chase, circle and shoot
   for(const f of foes){
-    if(!f.alive){f.respawn-=dt;if(f.respawn<=0&&mode==='play')spawnFoe(f);continue;}
+    if(!f.alive){if(S.mode==='free'&&f.idx<4){f.respawn-=dt;if(f.respawn<=0&&mode==='play')spawnFoe(f);}continue;}
+    // GREEN PHONE EDIT: v4 dogfight AI. fighters commit to a maneuver and hold it, so their turns are readable and you can lead them
     const fp=f.m.position;
     const toP=tmp.copy(pos).sub(fp);const dist=toP.length();
-    f.wT-=dt;if(f.wT<=0){f.wT=rnd(2,4);f.wander.set(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(rnd(40,90));}
-    const target=tmp2.copy(pos).add(f.wander);
-    if(dist<45)target.copy(fp).add(toP.clone().multiplyScalar(-3)).add(f.wander);
     if(dist>1200){f.alive=false;f.m.visible=false;f.respawn=1;continue;}
-    mat4.lookAt(fp,target,AY);tmpQ.setFromRotationMatrix(mat4);
-    f.q.rotateTowards(tmpQ,1.1*dt);
-    f.m.quaternion.copy(f.q);
     const ff=new THREE.Vector3(0,0,-1).applyQuaternion(f.q);
-    fp.addScaledVector(ff,(dist>250?95:70)*dt);
+    const aimNow=ff.dot(tmp2.copy(toP).normalize());
+    f.stT-=dt;
+    if(f.st==='attack'){
+      mat4.lookAt(fp,pos,AY);tmpQ.setFromRotationMatrix(mat4);
+      f.q.rotateTowards(tmpQ,0.95*dt);
+      const side=new THREE.Vector3(1,0,0).applyQuaternion(f.q).dot(toP)/Math.max(1,dist);
+      f.bank+=(-side*1.1-f.bank)*Math.min(1,dt*3);
+      if(dist<70){f.st='extend';f.stT=rnd(1.4,2.2);}
+      else if(f.stT<=0){f.st='turn';f.stT=rnd(2.5,4);pickTurn(f);}
+    }else if(f.st==='extend'){
+      f.bank+=(0-f.bank)*Math.min(1,dt*3);
+      if(f.stT<=0){f.st='turn';f.stT=rnd(2.5,4);pickTurn(f);}
+    }else{
+      // GREEN PHONE EDIT: steady committed turn, same rate the whole time
+      f.q.multiply(tmpQ.setFromAxisAngle(f.tax,f.trate*dt));
+      f.bank+=(f.tbank-f.bank)*Math.min(1,dt*2.5);
+      if(f.stT<=0){f.st='attack';f.stT=rnd(4,6);}
+    }
+    f.q.normalize();f.m.quaternion.copy(f.q);
+    f.m.userData.inner.rotation.z=f.bank;
+    const fsp=f.st==='turn'?78:f.st==='extend'?105:92;
+    ff.set(0,0,-1).applyQuaternion(f.q);
+    f.vel.copy(ff).multiplyScalar(fsp);
+    fp.addScaledVector(f.vel,dt);
     if(f.hitT>0){f.hitT-=dt;}
     f.cool-=dt;
-    const aim=ff.dot(toP.normalize());
-    if(f.cool<=0&&dist<380&&aim>0.94){
+    if(f.cool<=0&&dist<360&&f.st==='attack'&&aimNow>0.96){
       shoot(tmp.copy(fp).addScaledVector(ff,3),ff,200,true,1,null);
       f.burst++;
       if(f.burst>=4){f.burst=0;f.cool=rnd(1.4,2.6);}else f.cool=0.13;
     }
   }
+
+  if(S.mode==='hunt')stepMothership(dt);
 
   // GREEN PHONE EDIT: move lasers and check hits
   const a=new THREE.Vector3();
@@ -553,6 +712,7 @@ function step(dt){
           if(m.userData.hp<=0)killRock(m);break;
         }
       }
+      if(!hit&&ms.alive&&hitMothership(a,p,b.dmg))hit=true;
       if(!hit)for(const f of foes){
         if(!f.alive)continue;
         if(segHit(a,p,f.m.position,3)){
@@ -580,7 +740,7 @@ function step(dt){
 
   gate.rotation.z+=dt*0.5;
   const gd=gate.position.distanceTo(pos);
-  if(gd<10.5){gates++;score+=50;placeGate();toast('Ring +50',1);}
+  if(S.mode==='hunt'){}else if(gd<10.5){gates++;score+=50;placeGate();toast('Ring +50',1);}
   else if(gd>1100)placeGate();
 
   // GREEN PHONE EDIT: chase camera
@@ -594,14 +754,23 @@ function step(dt){
   fill.style.height=(throttle*100)+'%';
   const hf=$('heatFill');hf.style.width=(heat*100)+'%';hf.style.background=overheat?'#c8362b':heat>0.7?'#c27a12':'#f2c230';
   $('heatLbl').textContent=overheat?'COOLING DOWN':'BARREL HEAT';
-  hud.innerHTML=SH.name+'<br>Speed '+Math.round(speed)+'<br>Score '+score+'<br>Kills '+kills+'<br>Hits taken '+hitsTaken+(S.steer==='tilt'&&!tRaw?'<br>No tilt sensor yet':'');
+  hud.innerHTML=(S.mode==='hunt'?'Hunt<br>':'')+SH.name+'<br>Speed '+Math.round(speed)+'<br>Score '+score+'<br>Kills '+kills+'<br>Hits taken '+hitsTaken+(S.steer==='tilt'&&!tRaw?'<br>No tilt sensor yet':'');
 
   // GREEN PHONE EDIT: crosshair and edge arrows
   tmp.copy(pos).addScaledVector(fwdV,140).project(camera);
   const cr=$('cross');cr.style.display='block';cr.style.left=((tmp.x+1)/2*innerWidth)+'px';cr.style.top=((1-tmp.y)/2*innerHeight)+'px';
-  edgeArrow($('arrowRing'),gate.position);
+  if(S.mode==='hunt')$('arrowRing').style.display='none';else edgeArrow($('arrowRing'),gate.position);
   let near=null,nd=1e9;foes.forEach(f=>{if(f.alive){const d=f.m.position.distanceTo(pos);if(d<nd){nd=d;near=f;}}});
   if(near)edgeArrow($('arrowFoe'),near.m.position);else $('arrowFoe').style.display='none';
+  // GREEN PHONE EDIT: lead marker. put the crosshair on the diamond and the lasers meet the target there
+  let tgt=null,tv=null,best=1e9,isMs=false;
+  foes.forEach(f=>{if(!f.alive)return;const d=f.m.position.distanceTo(pos);if(d<500&&d<best&&tmp.copy(f.m.position).sub(pos).normalize().dot(fwdV)>0.5){best=d;tgt=f.m.position;tv=f.vel;isMs=false;}});
+  if(S.mode==='hunt'&&ms.alive){const d=ms.m.position.distanceTo(pos);if(d<700&&(!tgt||d<best*0.6)&&tmp.copy(ms.m.position).sub(pos).normalize().dot(fwdV)>0.5){tgt=ms.m.position;tv=ms.vel;isMs=true;best=d;}}
+  const ld=$('lead');
+  if(tgt){
+    tmp.copy(tgt).addScaledVector(tv,best/320).project(camera);
+    if(tmp.z<1){ld.style.display='block';ld.className='lead'+(isMs?' ms':'');ld.style.left=((tmp.x+1)/2*innerWidth)+'px';ld.style.top=((1-tmp.y)/2*innerHeight)+'px';}else ld.style.display='none';
+  }else ld.style.display='none';
 }
 function hitFlash(){const fl=$('flash');fl.style.opacity=0.3;setTimeout(()=>fl.style.opacity=0,110);}
 const camFwd=new THREE.Vector3();
@@ -632,7 +801,7 @@ function menuStep(dt){
   camera.fov=55;camera.updateProjectionMatrix();
   for(const m of rocks){m.rotation.x+=m.userData.spin.x*dt;m.rotation.y+=m.userData.spin.y*dt;}
   sky.rotation.y+=dt*0.01;
-  $('cross').style.display='none';$('arrowRing').style.display='none';$('arrowFoe').style.display='none';
+  $('cross').style.display='none';$('arrowRing').style.display='none';$('arrowFoe').style.display='none';$('arrowMs').style.display='none';$('lead').style.display='none';
 }
 
 let last=performance.now();
@@ -643,6 +812,7 @@ function loop(now){
   renderer.render(scene,camera);
   requestAnimationFrame(loop);
 }
+document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{S.mode=b.dataset.m;saveS();paintMenu();}));
 setShip(S.ship);paintMenu();paintSettings();placeGate();
 requestAnimationFrame(loop);
 </script>
