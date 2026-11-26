@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v9 adds Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v10 adds online scores with callsigns and a leaderboard. v9 added Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -122,6 +122,13 @@ body.storymenu #mapBlock{display:none}
 .ships button.locked{opacity:.35}
 .brieftext{font-size:14px;line-height:1.45;color:var(--ink);margin:8px 0;text-align:left}
 .briefgoal{font-size:13px;font-weight:900;color:#24552a;margin:6px 0 2px}
+/* GREEN PHONE EDIT: v10 leaderboard */
+.lb{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0}
+.lb td{padding:4px 6px;border-bottom:1px solid var(--panel2)}
+.lb td:first-child{width:28px;color:var(--ink2);font-weight:900}
+.lb td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.lb tr.me td{background:#dcefdc}
+.callin{font:inherit;font-size:14px;font-weight:800;border:2px solid var(--edge);border-radius:7px;padding:6px 8px;width:150px;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -178,7 +185,7 @@ body.storymenu #mapBlock{display:none}
   <div class="perk" id="shipPerk"></div>
   <div id="stats"></div>
   <div class="best" id="best"></div>
-  <div class="mrow"><button id="ctrlBtn">Controls</button><button class="go" id="launchBtn">Launch</button></div>
+  <div class="mrow"><button id="ctrlBtn">Controls</button><button id="scoresBtn">Scores</button><button class="go" id="launchBtn">Launch</button></div>
 </div>
 
 <div class="overlay" id="endcard">
@@ -196,9 +203,17 @@ body.storymenu #mapBlock{display:none}
     <div class="mrow"><button id="bBack">Back</button><button class="go" id="bStart">Start mission</button></div>
   </div>
 </div>
+<div class="overlay" id="board">
+  <div class="card">
+    <h1 id="lbTitle">Top pilots</h1>
+    <div id="lbBody" style="text-align:center;font-size:14px;color:var(--ink2)">Loading</div>
+    <div class="mrow"><button class="go" id="lbClose">Close</button></div>
+  </div>
+</div>
 <div class="overlay" id="settings">
   <div class="card">
     <h1 id="setTitle">Controls</h1>
+    <div class="row"><span>Callsign</span><input class="callin" id="callsign" maxlength="12"></div>
     <div class="row"><span>Steering</span><div class="seg" data-opt="steer"><button data-v="tilt">Tilt</button><button data-v="buttons">Buttons</button></div></div>
     <div class="row"><span>Throttle</span><div class="seg" data-opt="throttle"><button data-v="slider">Slider</button><button data-v="tilt">Tilt fwd/back</button></div></div>
     <div class="row"><span>Invert climb/dive</span><div class="seg" data-opt="invPitch"><button data-v="false">Off</button><button data-v="true">On</button></div></div>
@@ -211,7 +226,7 @@ body.storymenu #mapBlock{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // GREEN PHONE EDIT: settings with safe storage
-const DEF={story:0,mission:0,view:'chase',steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
+const DEF={callsign:'',story:0,mission:0,view:'chase',steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
 if(!S.bests)S.bests={};
@@ -640,6 +655,43 @@ function storyCheck(){
   if(STORY[storyRun].done())missionEnd(true);
 }
 
+// GREEN PHONE EDIT: v10 online scores. boards are mode and map, hover times are hundredths of a second and lower wins
+const SCORE_API='xxxxxxxx';
+const apiOn=()=>/^https?:\/\//.test(SCORE_API);
+if(!S.callsign){S.callsign='PILOT'+Math.floor(100+Math.random()*900);saveS();}
+const MAPN={belt:'Asteroid belt',ice:'Ice field',scrap:'Scrapyard'};
+function fmtScore(mode,v){return mode==='hover'?fmtT(v/100):mode==='fuel'?(v/1000).toFixed(2)+' km':mode==='zone'?v+' margin':String(v);}
+let lastRank=null;
+async function submitScore(val){
+  if(storyRun>=0||!apiOn()||!(val>0))return null;
+  const board=S.mode+'_'+S.map;
+  try{
+    const r=await fetch(SCORE_API+'/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({board:board,name:S.callsign,score:Math.round(val)})});
+    const d=await r.json();if(d&&d.rank){lastRank=d.rank;return d;}
+  }catch(e){}
+  return null;
+}
+function showRank(d){
+  if(!d)return;
+  const el=$('endMsg');if($('endcard').style.display==='flex')el.textContent+=' Online rank #'+d.rank+'.';
+  else toast('Online rank #'+d.rank,2);
+}
+async function openBoard(){
+  const m=S.mode==='story'?'free':S.mode;
+  $('lbTitle').textContent='Top pilots: '+MODES[m].n+', '+MAPN[S.map];
+  $('board').style.display='flex';
+  const body=$('lbBody');
+  if(!apiOn()){body.textContent='Online scores are not connected yet.';return;}
+  body.textContent='Loading';
+  try{
+    const r=await fetch(SCORE_API+'/top?board='+m+'_'+S.map);const d=await r.json();
+    if(!d.top||!d.top.length){body.textContent='No scores yet. Be the first.';return;}
+    body.innerHTML='<table class="lb">'+d.top.map((t,i)=>'<tr class="'+(t.name===S.callsign.toUpperCase()?'me':'')+'"><td>'+(i+1)+'</td><td>'+t.name.replace(/[<>&]/g,'')+'</td><td>'+fmtScore(m,t.score)+'</td></tr>').join('')+'</table>';
+  }catch(e){body.textContent='Could not reach the score server.';}
+}
+$('lbClose').addEventListener('click',()=>{$('board').style.display='none';});
+setTimeout(()=>{$('scoresBtn').addEventListener('click',openBoard);},0);
+
 // GREEN PHONE EDIT: menu
 let mode='menu',running=false,started=false;
 function bar(label,v){return '<div class="stat"><b>'+label+'</b><div class="bar"><i style="width:'+Math.round(clamp(v,0.05,1)*100)+'%"></i></div></div>';}
@@ -691,6 +743,8 @@ document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',(
   S[opt]=v;saveS();paintSettings();
 }));
 $('sens').addEventListener('input',e=>{S.sens=parseFloat(e.target.value);saveS();});
+$('callsign').value=S.callsign;
+$('callsign').addEventListener('input',e=>{const v=e.target.value.toUpperCase().replace(/[^A-Z0-9 _-]/g,'').slice(0,12);e.target.value=v;if(v.trim()){S.callsign=v.trim();saveS();}});
 
 // GREEN PHONE EDIT: start, reset, end of run
 function hideAll(){
@@ -788,7 +842,7 @@ function openSettings(inGame){
 $('ctrlBtn').addEventListener('click',()=>openSettings(false));
 $('pauseBtn').addEventListener('click',()=>{if(mode==='play')openSettings(true);});
 $('closeSetBtn').addEventListener('click',()=>{$('settings').style.display='none';if(mode==='play'){running=true;last=performance.now();}});
-$('toMenuBtn').addEventListener('click',()=>{if(storyRun<0&&(S.mode==='free'||S.mode==='hunt'))saveBest(score);toMenu();});
+$('toMenuBtn').addEventListener('click',()=>{if(storyRun<0&&(S.mode==='free'||S.mode==='hunt')){saveBest(score);submitScore(score).then(showRank);}toMenu();});
 $('endMenuBtn').addEventListener('click',toMenu);
 $('againBtn').addEventListener('click',()=>{
   if(storyRun>=0){const n=$('againBtn').dataset.next?storyRun+1:storyRun;beginMission(n);return;}
@@ -1149,7 +1203,7 @@ function stepZones(dt){
   const chip=z=>'<span class="zc" style="background:'+(z.owner===1?'#3f8a3f':z.owner===-1?'#c8362b':'#8a8f94')+'">'+z.n+'</span>';
   $('msLbl').innerHTML='<span style="color:#24552a">GREEN '+Math.floor(gScore)+'</span>  '+zones.map(chip).join('')+'  <span style="color:#c8362b">RED '+Math.floor(rScore)+'</span>';
   $('msFill').style.width=(gScore/10)+'%';$('msFill').style.background='#3f8a3f';$('msFill2').style.width=(rScore/10)+'%';
-  if(gScore>=1000)endRun('Green team wins','You took the territory. Kills '+kills+'. Hits taken '+hitsTaken+'.'+(saveBest(1000-Math.floor(rScore))?' New best margin.':''),true);
+  if(gScore>=1000){endRun('Green team wins','You took the territory. Kills '+kills+'. Hits taken '+hitsTaken+'.'+(saveBest(1000-Math.floor(rScore))?' New best margin.':''),true);submitScore(1000-Math.floor(rScore)).then(showRank);}
   else if(rScore>=1000)endRun('Red team wins','They held the zones. Green reached '+Math.floor(gScore)+'. Kills '+kills+'.');
 }
 
@@ -1171,7 +1225,7 @@ function stepFuel(dt){
   const pc=Math.round(fuel*100);
   $('msLbl').textContent='FUEL '+pc+'%   DISTANCE '+(farthest/1000).toFixed(2)+' km';
   $('msFill').style.width=pc+'%';$('msFill').style.background=fuel<0.2?'#c8362b':fuel<0.4?'#c27a12':'#f2c230';$('msFill2').style.width='0';
-  if(fuel<=0&&speed<4){emptyT+=dt;if(emptyT>1.5){const nb=saveBest(Math.round(farthest));endRun('Out of fuel','You made it '+(farthest/1000).toFixed(2)+' km.'+(nb?' New best.':''));}}
+  if(fuel<=0&&speed<4){emptyT+=dt;if(emptyT>1.5){const nb=saveBest(Math.round(farthest));endRun('Out of fuel','You made it '+(farthest/1000).toFixed(2)+' km.'+(nb?' New best.':''));submitScore(Math.round(farthest)).then(showRank);}}
 }
 
 // GREEN PHONE EDIT: v6 hover race. terrain heightfield, looping track, gates, speeder physics
@@ -1295,7 +1349,7 @@ function hoverStep(dt){
       if(hv.lap>=HOVER.laps){
         const k='hover_'+S.map,prev=S.bests[k],nb=!prev||hv.t<prev;if(nb){S.bests[k]=hv.t;saveS();}
         if(storyRun>=0){const lim=STORY[storyRun].hover;missionEnd(hv.t<=lim,'Time '+fmtT(hv.t)+'.');return;}
-        endRun('Finished','Total '+fmtT(hv.t)+'. Best lap '+fmtT(hv.best)+'. Bumps '+hitsTaken+'.'+(nb?' New best time.':''));return;
+        endRun('Finished','Total '+fmtT(hv.t)+'. Best lap '+fmtT(hv.best)+'. Bumps '+hitsTaken+'.'+(nb?' New best time.':''));submitScore(Math.round(hv.t*100)).then(showRank);return;
       }
       toast('Lap '+(hv.lap+1)+'  last lap '+fmtT(hv.lapT),1.6);hv.lap++;hv.lapT=0;
     }
