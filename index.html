@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v10 adds online scores with callsigns and a leaderboard. v9 added Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v11 points scores at the live Railway server. v10 added online scores with callsigns and a leaderboard. v9 added Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -656,7 +656,7 @@ function storyCheck(){
 }
 
 // GREEN PHONE EDIT: v10 online scores. boards are mode and map, hover times are hundredths of a second and lower wins
-const SCORE_API='xxxxxxxx';
+const SCORE_API='https://scores-production-6350373e.up.railway.app';
 const apiOn=()=>/^https?:\/\//.test(SCORE_API);
 if(!S.callsign){S.callsign='PILOT'+Math.floor(100+Math.random()*900);saveS();}
 const MAPN={belt:'Asteroid belt',ice:'Ice field',scrap:'Scrapyard'};
