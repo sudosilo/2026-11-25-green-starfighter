@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v5 adds mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v6 adds Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -73,7 +73,7 @@ body.playing .menu{display:none}
 .seg button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
 input[type=range]{width:150px;accent-color:var(--blue)}
 /* GREEN PHONE EDIT: v4 mode picker and mothership health bar */
-.modesel{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:3px}
+.modesel{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:3px}
 .maps{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 6px}
 .maps button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:5px 2px;font-size:12px;font-weight:900;color:var(--ink)}
 .maps button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
@@ -92,6 +92,8 @@ body.playing.topbar .msbar{display:block}
 .toast{top:calc(env(safe-area-inset-top,0px) + 50px)}
 .lead{position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid var(--red);transform:rotate(45deg);pointer-events:none;display:none}
 .lead.ms{border-color:#6a3d9a;width:22px;height:22px;margin:-11px 0 0 -11px}
+body.hovermode .firewrap{display:none}
+body.hovermode .slider{right:14px}
 </style>
 </head>
 <body>
@@ -124,7 +126,7 @@ body.playing.topbar .msbar{display:block}
 <div class="menu" id="menu">
   <div class="logo">POLYGON <span>STARFIGHTER</span></div>
   <div class="lbl2" style="margin-top:6px">MODE</div>
-  <div class="modesel" id="modes"><button data-m="free">Free</button><button data-m="hunt">Hunt</button><button data-m="zone">Territory</button><button data-m="fuel">Long haul</button></div>
+  <div class="modesel" id="modes"><button data-m="free">Free</button><button data-m="hunt">Hunt</button><button data-m="zone">Territory</button><button data-m="fuel">Long haul</button><button data-m="hover">Hover race</button></div>
   <div class="modedesc" id="modeDesc"></div>
   <div class="lbl2">MAP</div>
   <div class="maps" id="maps"><button data-p="belt">Asteroid belt</button><button data-p="ice">Ice field</button><button data-p="scrap">Scrapyard</button></div>
@@ -259,6 +261,7 @@ const MODES={
   free:{n:'Free',d:'Fly the field. Shoot rocks, mines and fighters, and fly through the rings.'},
   hunt:{n:'Hunt',d:'Chase a slow mothership. It launches fighters and its turrets shoot back. Knock out turrets for bonus points.'},
   zone:{n:'Territory',d:'You and two green wingmen fight the red team for three zones. Sit inside a zone to take it. First team to 1000 wins.'},
+  hover:{n:'Hover race',d:'Ground racing. Your ship becomes a speeder skimming the terrain. Hit every gate in order, three laps, beat your best time.'},
   fuel:{n:'Long haul',d:'Pick a direction and go. Fly through fuel pods before the tank runs dry. Hits and mines leak fuel.'}
 };
 const MAPS={
@@ -353,7 +356,7 @@ function buildMap(id){
 const DUST=130,dustN=600,dpos=new Float32Array(dustN*3);
 for(let i=0;i<dustN*3;i++)dpos[i]=rnd(-1,1)*DUST;
 const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
-scene.add(new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5f6469,size:0.4})));
+const dust=new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5f6469,size:0.4}));scene.add(dust);
 
 // GREEN PHONE EDIT: gate ring for free mode
 const gate=W(new THREE.TorusGeometry(11,1.3,6,18),0xd2601a,0xf6dca5);scene.add(gate);
@@ -547,7 +550,7 @@ function paintMenu(){
   document.querySelectorAll('#maps button').forEach(b=>b.classList.toggle('sel',b.dataset.p===S.map));
   $('modeDesc').textContent=MODES[S.mode].d;
   const bk=S.bests[bestKey()];
-  $('best').textContent=bk?('Best here: '+(S.mode==='fuel'?(bk/1000).toFixed(2)+' km':bk)):'';
+  $('best').textContent=bk?('Best here: '+(S.mode==='fuel'?(bk/1000).toFixed(2)+' km':S.mode==='hover'?fmtT(bk):bk)):'';
 }
 document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{S.mode=b.dataset.m;saveS();paintMenu();}));
 document.querySelectorAll('#maps button').forEach(b=>b.addEventListener('click',()=>{if(S.map===b.dataset.p)return;S.map=b.dataset.p;saveS();buildMap(S.map);paintMenu();}));
@@ -557,8 +560,9 @@ function paintSettings(){
   const turnTilt=S.steer==='tilt',pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt';
   document.querySelector('.b.lf').style.display=turnTilt?'none':'flex';
   document.querySelector('.b.rt').style.display=turnTilt?'none':'flex';
-  document.querySelector('.b.up').style.display=pitchTilt?'none':'flex';
-  document.querySelector('.b.dn').style.display=pitchTilt?'none':'flex';
+  const hovUD=S.mode==='hover'&&mode!=='menu';
+  document.querySelector('.b.up').style.display=(pitchTilt&&!hovUD)||(hovUD&&S.throttle==='tilt')?'none':'flex';
+  document.querySelector('.b.dn').style.display=(pitchTilt&&!hovUD)||(hovUD&&S.throttle==='tilt')?'none':'flex';
   slider.style.visibility=S.throttle==='slider'?'visible':'hidden';
   $('firewrap').style.right=S.throttle==='slider'?'92px':'14px';
   $('recenterBtn').style.display=(S.steer==='tilt'||S.throttle==='tilt')?'block':'none';
@@ -577,12 +581,14 @@ function hideAll(){
   pods.forEach(p=>p.m.visible=false);
   zones.forEach(z=>z.g.visible=false);
   ms.alive=false;ms.m.visible=false;gate.visible=false;
+  hoverWorld.visible=false;rocks.forEach(m=>m.visible=true);dust.visible=true;
 }
 function resetRun(){
   pos.set(0,0,0);vel.set(0,0,0);q.identity();speed=0;throttle=0.35;pitchRate=yawRate=bank=0;
   heat=0;overheat=false;score=0;gates=0;hitsTaken=0;kills=0;fuel=1;farthest=0;emptyT=0;gScore=0;rScore=0;
   hideAll();
   rocks.forEach(m=>{if(m.position.length()<70)m.position.z-=220;m.userData.hp=m.userData.maxhp;});
+  if(S.mode==='hover'){startHover();return;}
   const mineCount={free:10,hunt:6,zone:6,fuel:16}[S.mode];
   mines.forEach((m,i)=>{if(i<mineCount){m.alive=true;m.hp=15;m.m.visible=true;m.m.position.set(rnd(-1,1)*FIELD,rnd(-1,1)*FIELD,rnd(-1,1)*FIELD);if(m.m.position.length()<150)m.m.position.z-=300;}});
   if(S.mode==='free'){gate.visible=true;placeGate();}
@@ -606,17 +612,19 @@ function startRun(){
   mode='play';running=true;
   document.body.classList.add('playing');
   document.body.classList.toggle('topbar',S.mode!=='free');
+  document.body.classList.toggle('hovermode',S.mode==='hover');
   document.querySelector('.topbtns').style.display='flex';
   setTimeout(recenter,350);
   if(S.mode==='free')toast('Hold FIRE to shoot. Watch the barrel heat.',3);
   if(S.mode==='zone')toast('Take the zones. Fly inside a sphere to capture it.',3);
   if(S.mode==='fuel')toast('Fly through the fuel pods. Pick a direction and go.',3);
+  if(S.mode==='hover')paintSettings();
 }
 function toMenu(){
   $('settings').style.display='none';$('endcard').style.display='none';
-  mode='menu';running=false;document.body.classList.remove('playing','topbar');
+  mode='menu';running=false;document.body.classList.remove('playing','topbar','hovermode');
   document.querySelector('.topbtns').style.display='none';
-  hideAll();pos.set(0,0,0);paintMenu();
+  hideAll();pos.set(0,0,0);paintMenu();paintSettings();
 }
 function saveBest(v){const k=bestKey();if(!S.bests[k]||v>S.bests[k]){S.bests[k]=v;saveS();return true;}return false;}
 function endRun(title,msg){
@@ -904,9 +912,160 @@ function stepFuel(dt){
   if(fuel<=0&&speed<4){emptyT+=dt;if(emptyT>1.5){const nb=saveBest(Math.round(farthest));endRun('Out of fuel','You made it '+(farthest/1000).toFixed(2)+' km.'+(nb?' New best.':''));}}
 }
 
+// GREEN PHONE EDIT: v6 hover race. terrain heightfield, looping track, gates, speeder physics
+const HOVER={laps:3,half:30,gateN:16};
+const HCOL={belt:0x8a6a4a,ice:0x5f97b8,scrap:0x6f7378};
+function H(x,z){
+  let h=18*Math.sin(x*0.0045+1)*Math.cos(z*0.0038)+9*Math.sin(x*0.013+z*0.009)+4*Math.cos(z*0.021-x*0.006);
+  const r=Math.hypot(x,z);if(r>1050)h+=(r-1050)*0.35;
+  return h;
+}
+const TRACK=[];
+for(let i=0;i<400;i++){
+  const t=i/400*Math.PI*2,R=650+170*Math.sin(3*t)+60*Math.cos(2*t);
+  const x=R*Math.cos(t),z=R*Math.sin(t);TRACK.push(V(x,H(x,z)+0.6,z));
+}
+const TN=TRACK.length;
+function trackTan(i){return V().copy(TRACK[(i+1)%TN]).sub(TRACK[(i+TN-1)%TN]).setY(0).normalize();}
+const hoverWorld=new THREE.Group();hoverWorld.visible=false;scene.add(hoverWorld);
+let hoverBuiltFor=null,hoverObs=[],hGates=[];
+function buildHover(map){
+  if(hoverBuiltFor===map)return;
+  hoverWorld.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&o.material.dispose)o.material.dispose();});
+  while(hoverWorld.children.length)hoverWorld.remove(hoverWorld.children[0]);
+  hoverObs=[];hGates=[];
+  const lc=HCOL[map];
+  const pg=new THREE.PlaneGeometry(3200,3200,72,72);pg.rotateX(-Math.PI/2);
+  const pp=pg.attributes.position;for(let i=0;i<pp.count;i++)pp.setY(i,H(pp.getX(i),pp.getZ(i)));
+  pg.computeVertexNormals();
+  hoverWorld.add(new THREE.Mesh(pg,new THREE.MeshBasicMaterial({color:PAPER,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2})));
+  hoverWorld.add(new THREE.LineSegments(new THREE.WireframeGeometry(pg),new THREE.LineBasicMaterial({color:lc,transparent:true,opacity:0.55})));
+  // GREEN PHONE EDIT: track edges and cross stripes
+  const e=[];
+  for(let i=0;i<TN;i++){
+    const a=TRACK[i],b=TRACK[(i+1)%TN],n=V(-trackTan(i).z,0,trackTan(i).x),n2=V(-trackTan((i+1)%TN).z,0,trackTan((i+1)%TN).x);
+    [-1,1].forEach(sd=>{
+      const p1=V().copy(a).addScaledVector(n,sd*HOVER.half),p2=V().copy(b).addScaledVector(n2,sd*HOVER.half);
+      p1.y=H(p1.x,p1.z)+0.7;p2.y=H(p2.x,p2.z)+0.7;e.push(p1.x,p1.y,p1.z,p2.x,p2.y,p2.z);
+    });
+    if(i%5===0){
+      const l=V().copy(a).addScaledVector(n,-HOVER.half),r=V().copy(a).addScaledVector(n,HOVER.half);
+      l.y=H(l.x,l.z)+0.7;r.y=H(r.x,r.z)+0.7;e.push(l.x,l.y,l.z,r.x,r.y,r.z);
+    }
+  }
+  const eg=new THREE.BufferGeometry();eg.setAttribute('position',new THREE.Float32BufferAttribute(e,3));
+  hoverWorld.add(new THREE.LineSegments(eg,new THREE.LineBasicMaterial({color:0xd2601a})));
+  // GREEN PHONE EDIT: gates as half ring arches across the track
+  for(let g=0;g<HOVER.gateN;g++){
+    const i=Math.floor(g*TN/HOVER.gateN),c=TRACK[i],t=trackTan(i);
+    const arch=W(new THREE.TorusGeometry(HOVER.half+2,1.2,4,14,Math.PI),g===0?INK:0x8a8f94,g===0?0xf6dca5:0xffffff);
+    arch.position.set(c.x,c.y-1,c.z);arch.rotation.y=Math.atan2(t.x,t.z);
+    hoverWorld.add(arch);hGates.push({i:i,p:V(c.x,c.y+6,c.z),m:arch});
+  }
+  // GREEN PHONE EDIT: boulders, ice spires or wreck chunks beside the track
+  const cols=MAPS[map].colors;
+  for(let k=0;k<70;k++){
+    const i=Math.floor(Math.random()*TN),c=TRACK[i],n=V(-trackTan(i).z,0,trackTan(i).x);
+    const off=(Math.random()<0.5?-1:1)*rnd(HOVER.half+14,HOVER.half+170);
+    const x=c.x+n.x*off,z=c.z+n.z*off,r=rnd(4,14);
+    const m=W(obstacleGeo(map,r),cols[k%4]);m.position.set(x,H(x,z)+r*0.4,z);hoverWorld.add(m);hoverObs.push({p:m.position,r:r*1.0});
+  }
+  // GREEN PHONE EDIT: a few obstacles right on the track to weave around
+  for(let k=0;k<12;k++){
+    const i=Math.floor((k+0.5)*TN/12)+3,c=TRACK[i%TN],n=V(-trackTan(i%TN).z,0,trackTan(i%TN).x);
+    const off=rnd(-HOVER.half*0.6,HOVER.half*0.6),x=c.x+n.x*off,z=c.z+n.z*off,r=rnd(3,5);
+    const m=W(obstacleGeo(map,r),cols[k%4]);m.position.set(x,H(x,z)+r*0.4,z);hoverWorld.add(m);hoverObs.push({p:m.position,r:r});
+  }
+  hoverBuiltFor=map;
+}
+const hv={yaw:0,y:0,vy:0,lap:1,gate:1,t:0,lapT:0,best:0,count:0,near:0,laps:[]};
+function startHover(){
+  buildHover(S.map);hoverWorld.visible=true;rocks.forEach(m=>m.visible=false);dust.visible=false;
+  const t=trackTan(0);hv.yaw=Math.atan2(-t.x,-t.z);
+  pos.copy(TRACK[0]).addScaledVector(t,-25);pos.y=H(pos.x,pos.z)+2.2;hv.y=pos.y;hv.vy=0;
+  hv.lap=1;hv.gate=1;hv.t=0;hv.lapT=0;hv.best=0;hv.count=3.5;hv.near=0;hv.laps=[];
+  speed=0;vel.set(0,0,0);throttle=0;
+  paintGates();
+}
+function paintGates(){hGates.forEach((g,k)=>{g.m.children[1].material.color.setHex(k===hv.gate?0xd2601a:k===0?INK:0x8a8f94);});}
+function fmtT(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(2);}
+function hoverStep(dt){
+  const tilt=tiltInput();
+  let turn=0;
+  if(S.steer==='tilt'&&tilt)turn=tilt.turn;
+  turn+=keys.rt-keys.lf;if(S.invTurn)turn=-turn;turn=clamp(turn,-1,1);
+  if(S.throttle==='tilt'&&tilt)throttle=clamp(0.35+tilt.fwd*0.65,0,1);
+  if(keys.thUp||keys.up)throttle=clamp(throttle+dt*0.8,0,1);
+  if(keys.thDn||keys.dn)throttle=clamp(throttle-dt*0.8,0,1);
+  if(hv.count>0){
+    hv.count-=dt;const c=Math.ceil(hv.count);$('toast').textContent=hv.count>0?(c>3?'Get ready':String(c)):'GO';$('toast').style.opacity=1;toastT=0.6;
+  }else{hv.t+=dt;hv.lapT+=dt;}
+  const live=hv.count<=0;
+  // GREEN PHONE EDIT: nearest track point tells us if we are on the track
+  let bi=hv.near,bd=1e9;
+  for(let k=-30;k<=30;k++){const i=(hv.near+k+TN)%TN,d=(TRACK[i].x-pos.x)**2+(TRACK[i].z-pos.z)**2;if(d<bd){bd=d;bi=i;}}
+  if(bd>200*200){for(let i=0;i<TN;i++){const d=(TRACK[i].x-pos.x)**2+(TRACK[i].z-pos.z)**2;if(d<bd){bd=d;bi=i;}}}
+  hv.near=bi;const off=Math.sqrt(bd)>HOVER.half;
+  const top=SH.speed*1.15*(off?0.55:1);
+  yawRate+=((-turn*SH.turn*1.15)-yawRate)*(1-Math.exp(-dt*6));
+  hv.yaw+=yawRate*dt;
+  speed+=((live?throttle:0)*top-speed)*(1-Math.exp(-dt*(off?2.2:1.1)));
+  fwdV.set(-Math.sin(hv.yaw),0,-Math.cos(hv.yaw));
+  vel.lerp(tmp.copy(fwdV).multiplyScalar(speed),1-Math.exp(-dt*3.2));
+  pos.x+=vel.x*dt;pos.z+=vel.z*dt;
+  // GREEN PHONE EDIT: hover spring keeps you about two meters off the ground, crests can pop you up a little
+  const gh=H(pos.x,pos.z);
+  hv.vy+=((gh+2.2-hv.y)*40-hv.vy*7)*dt;hv.y+=hv.vy*dt;if(hv.y<gh+0.8){hv.y=gh+0.8;hv.vy=Math.max(0,hv.vy);}
+  pos.y=hv.y;
+  for(const o of hoverObs){
+    const dx=pos.x-o.p.x,dz=pos.z-o.p.z,d=Math.hypot(dx,dz),min=o.r+2;
+    if(d<min&&Math.abs(pos.y-o.p.y)<o.r+3){
+      const nx=dx/(d||1),nz=dz/(d||1);pos.x=o.p.x+nx*(min+0.1);pos.z=o.p.z+nz*(min+0.1);
+      const vn=vel.x*nx+vel.z*nz;if(vn<0){vel.x-=1.5*vn*nx;vel.z-=1.5*vn*nz;}
+      speed*=0.4;shake=0.5;hitFlash();hitsTaken++;
+    }
+  }
+  // GREEN PHONE EDIT: gates in order, gate 0 is start and finish
+  const g=hGates[hv.gate];
+  if(live&&Math.hypot(pos.x-g.p.x,pos.z-g.p.z)<HOVER.half+4){
+    if(hv.gate===0){
+      hv.laps.push(hv.lapT);if(!hv.best||hv.lapT<hv.best)hv.best=hv.lapT;
+      if(hv.lap>=HOVER.laps){
+        const k='hover_'+S.map,prev=S.bests[k],nb=!prev||hv.t<prev;if(nb){S.bests[k]=hv.t;saveS();}
+        endRun('Finished','Total '+fmtT(hv.t)+'. Best lap '+fmtT(hv.best)+'. Bumps '+hitsTaken+'.'+(nb?' New best time.':''));return;
+      }
+      toast('Lap '+(hv.lap+1)+'  last lap '+fmtT(hv.lapT),1.6);hv.lap++;hv.lapT=0;
+    }
+    hv.gate=(hv.gate+1)%HOVER.gateN;paintGates();
+  }
+  // GREEN PHONE EDIT: tilt the craft to the slope and bank into turns
+  const hF=H(pos.x+fwdV.x*4,pos.z+fwdV.z*4),hB=H(pos.x-fwdV.x*4,pos.z-fwdV.z*4);
+  const slope=Math.atan2(hF-hB,8);
+  bank+=(-turn*0.6-bank)*(1-Math.exp(-dt*5));
+  q.setFromEuler(new THREE.Euler(slope,hv.yaw,0,'YXZ'));
+  ship.position.copy(pos);ship.quaternion.copy(q);
+  shipMesh.rotation.set(0,0,bank);
+  shipMesh.userData.engs.forEach(e=>{const s=0.3+throttle*2.2;e.m.scale.set(1,s,1);e.m.position.z=e.z+s*0.5;});
+  // GREEN PHONE EDIT: low chase camera
+  const cq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.1+slope*0.4,hv.yaw,0,'YXZ'));
+  camOff.set(0,3.4,10+speed*0.012).applyQuaternion(cq);
+  const want=tmp.copy(pos).add(camOff);const cg=H(want.x,want.z)+1.5;if(want.y<cg)want.y=cg;
+  const ck=1-Math.exp(-dt*7);camera.position.lerp(want,ck);camera.quaternion.slerp(cq,ck);
+  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=rnd(-.5,.5)*shake;camera.position.y+=rnd(-.5,.5)*shake;}
+  camera.fov=66+speed*0.12;camera.updateProjectionMatrix();
+  fill.style.height=(throttle*100)+'%';
+  hud.innerHTML='Hover race  '+SH.name+'<br>Speed '+Math.round(speed)+(off?'  OFF TRACK':'')+'<br>Lap '+hv.lap+' of '+HOVER.laps+'<br>Gate '+(hv.gate===0?HOVER.gateN:hv.gate)+' of '+HOVER.gateN+'<br>Time '+fmtT(hv.t)+(hv.best?'<br>Best lap '+fmtT(hv.best):'');
+  const bk=S.bests['hover_'+S.map];
+  $('msLbl').textContent='LAP '+fmtT(hv.lapT)+(bk?'   RECORD '+fmtT(bk):'');
+  $('msFill').style.width=((hv.gate===0?HOVER.gateN:hv.gate)/HOVER.gateN*100)+'%';$('msFill').style.background='#d2601a';$('msFill2').style.width='0';
+  edgeArrow($('arrowRing'),g.p);
+  ['cross','arrowFoe','arrowMs','lead'].forEach(id=>$(id).style.display='none');
+}
+
 // GREEN PHONE EDIT: main game step
 const hud=$('hud');
 function step(dt){
+  if(S.mode==='hover'){hoverStep(dt);return;}
   const tilt=tiltInput();
   let turn=0,pitch=0;
   if(S.steer==='tilt'&&tilt)turn=tilt.turn;
