@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v7 adds a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v8 adds ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -101,6 +101,12 @@ body.playing.cockpitview .cockpit{display:block}
 .dash{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);transform:translateX(-50%);display:flex;gap:10px;font-size:12px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
 .dash div{background:#fff;border:2px solid var(--edge);border-radius:6px;padding:3px 8px;min-width:62px;text-align:center}
 .dash small{display:block;font-size:9px;color:var(--ink2)}
+/* GREEN PHONE EDIT: v8 build button for outposts */
+.buildbtn{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);right:196px;width:74px;height:56px;border-radius:10px;background:#fff;border:2px solid var(--edge);color:var(--ink2);font-size:15px;font-weight:900;display:none;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 0 #b9b6ab;opacity:.55}
+.buildbtn small{font-size:10px;font-weight:800}
+body.playing.zonemode .buildbtn{display:flex}
+.buildbtn.ready{opacity:1;background:#dcefdc;border-color:var(--green);color:#24552a}
+.buildbtn.on{transform:translateY(2px);box-shadow:0 1px 0 #b9b6ab}
 </style>
 </head>
 <body>
@@ -133,6 +139,7 @@ body.playing.cockpitview .cockpit{display:block}
   <div class="heat"><i id="heatFill"></i></div>
   <div class="fire" id="fireBtn">FIRE</div>
 </div>
+<div class="buildbtn play" id="buildBtn">BUILD<small id="buildCost">40 ore</small></div>
 <div class="arrow" id="arrowRing"></div>
 <div class="arrow foe" id="arrowFoe"></div>
 <div class="arrow ms" id="arrowMs"></div>
@@ -279,7 +286,7 @@ const tmpQ=new THREE.Quaternion(),mat4=new THREE.Matrix4();
 const MODES={
   free:{n:'Free',d:'Fly the field. Shoot rocks, mines and fighters, and fly through the rings.'},
   hunt:{n:'Hunt',d:'Chase a slow mothership. It launches fighters and its turrets shoot back. Knock out turrets for bonus points.'},
-  zone:{n:'Territory',d:'You and two green wingmen fight the red team for three zones. Sit inside a zone to take it. First team to 1000 wins.'},
+  zone:{n:'Territory',d:'You and two green wingmen fight the red team for three zones. Shoot asteroids for ore, then build outpost turrets inside zones you hold. First team to 1000 wins.'},
   hover:{n:'Hover race',d:'Ground racing. Your ship becomes a speeder skimming the terrain. Hit every gate in order, three laps, beat your best time.'},
   fuel:{n:'Long haul',d:'Pick a direction and go. Fly through fuel pods before the tank runs dry. Hits and mines leak fuel.'}
 };
@@ -584,6 +591,7 @@ function paintSettings(){
   document.querySelector('.b.dn').style.display=(pitchTilt&&!hovUD)||(hovUD&&S.throttle==='tilt')?'none':'flex';
   slider.style.visibility=S.throttle==='slider'?'visible':'hidden';
   $('firewrap').style.right=S.throttle==='slider'?'92px':'14px';
+  $('buildBtn').style.right=S.throttle==='slider'?'196px':'118px';
   $('recenterBtn').style.display=(S.steer==='tilt'||S.throttle==='tilt')?'block':'none';
 }
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
@@ -601,6 +609,7 @@ function hideAll(){
   zones.forEach(z=>z.g.visible=false);
   ms.alive=false;ms.m.visible=false;gate.visible=false;
   hoverWorld.visible=false;rocks.forEach(m=>m.visible=true);dust.visible=true;
+  ores.forEach(o=>{o.alive=false;o.m.visible=false;});outposts.forEach(o=>{o.alive=false;o.m.visible=false;});ore=0;orePending=0;
 }
 function resetRun(){
   pos.set(0,0,0);vel.set(0,0,0);q.identity();speed=0;throttle=0.35;pitchRate=yawRate=bank=0;
@@ -632,6 +641,7 @@ function startRun(){
   document.body.classList.add('playing');
   document.body.classList.toggle('topbar',S.mode!=='free');
   document.body.classList.toggle('hovermode',S.mode==='hover');
+  document.body.classList.toggle('zonemode',S.mode==='zone');
   document.querySelector('.topbtns').style.display='flex';
   setTimeout(recenter,350);
   if(S.mode==='free')toast('Hold FIRE to shoot. Watch the barrel heat.',3);
@@ -641,7 +651,7 @@ function startRun(){
 }
 function toMenu(){
   $('settings').style.display='none';$('endcard').style.display='none';
-  mode='menu';running=false;document.body.classList.remove('playing','topbar','hovermode');
+  mode='menu';running=false;document.body.classList.remove('playing','topbar','hovermode','zonemode');
   document.querySelector('.topbtns').style.display='none';
   hideAll();pos.set(0,0,0);paintMenu();paintSettings();
 }
@@ -699,6 +709,7 @@ function playerHit(leak){
 function killRock(m,byPlayer){
   boom(m.position,m.userData.col,m.userData.r,Math.min(14,4+Math.round(m.userData.r/2)));
   if(byPlayer)score+=Math.round(m.userData.r*2);
+  if(byPlayer&&S.mode==='zone')dropOre(m.position,m.userData.r);
   placeFar(m);
   m.userData.hp=m.userData.maxhp;
 }
@@ -738,6 +749,7 @@ function chooseTarget(f){
     let best=null,bd=380;
     const d0=f.m.position.distanceTo(pos);if(d0<bd){bd=d0;best=PLAYER_T;}
     allies.forEach(a=>{if(!a.alive)return;const d=f.m.position.distanceTo(a.m.position);if(d<bd){bd=d;best={p:a.m.position,v:a.vel,ship:true,craft:a};}});
+    outposts.forEach(o=>{if(!o.alive)return;const d=f.m.position.distanceTo(o.m.position);if(d<bd){bd=d;best={p:o.m.position,v:ZERO,ship:true,craft:o};}});
     if(best)return best;
     let z=null,zd=1e9;zones.forEach(zz=>{if(zz.c<=-0.99)return;const d=f.m.position.distanceTo(zz.p);if(d<zd){zd=d;z=zz;}});
     if(!z)z=zones[f.idx%3];
@@ -902,6 +914,97 @@ function hitMothership(a,p,b){
   return false;
 }
 
+// GREEN PHONE EDIT: v8 ore. asteroids you break in Territory drop gold chunks, fly near and they pull in
+const ORE_COST=40;
+let ore=0;
+const oreGeo=new THREE.OctahedronGeometry(1.1);
+const ores=[];
+for(let i=0;i<50;i++){const m=W(oreGeo,0xc27a12,0xfbe9b8);m.visible=false;scene.add(m);ores.push({m:m,alive:false,v:V(),val:0,life:0});}
+function dropOre(at,r){
+  const n=1+Math.floor(r/10),val=Math.max(2,Math.round(r*0.8/n));
+  for(let k=0;k<n;k++){
+    const o=ores.find(x=>!x.alive);if(!o)return;
+    o.alive=true;o.val=val;o.life=30;o.m.visible=true;o.m.position.copy(at);
+    o.v.set(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(rnd(4,12));
+    o.m.scale.setScalar(0.8+val*0.06);
+  }
+}
+let oreToastT=0,orePending=0;
+function stepOre(dt){
+  for(const o of ores){
+    if(!o.alive)continue;
+    o.life-=dt;if(o.life<=0){o.alive=false;o.m.visible=false;continue;}
+    const d=o.m.position.distanceTo(pos);
+    if(d<45)o.v.lerp(tmp.copy(pos).sub(o.m.position).normalize().multiplyScalar(70),Math.min(1,dt*4));
+    else o.v.multiplyScalar(1-dt*0.5);
+    o.m.position.addScaledVector(o.v,dt);o.m.rotation.y+=dt*2;o.m.rotation.x+=dt;
+    o.m.visible=o.life>4||Math.floor(o.life*6)%2===0;
+    if(d<5){ore+=o.val;orePending+=o.val;o.alive=false;o.m.visible=false;}
+  }
+  oreToastT-=dt;
+  if(orePending&&oreToastT<=0){toast('+'+orePending+' ore  ('+ore+')',1);orePending=0;oreToastT=0.8;}
+}
+
+// GREEN PHONE EDIT: v8 outpost turrets. build them inside a zone you hold, three per zone, they shoot red fighters and count toward holding the zone
+const outposts=[];
+function buildOutpost(){
+  const g=new THREE.Group();
+  const b=new THREE.OctahedronGeometry(2.6);b.scale(1,0.7,1);g.add(W(b,GREEN,GREENFILL));
+  const r=new THREE.TorusGeometry(3.6,0.25,4,14);r.rotateX(Math.PI/2);g.add(W(r,GREEN,0xc9dcc9));
+  [[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].forEach(d=>{const f=new THREE.BoxGeometry(0.3,0.3,2);f.translate(0,0,3.6+1);f.rotateY(Math.atan2(d[0],d[2]));g.add(W(f,GREEN,GREENFILL));});
+  const pv=new THREE.Group();pv.position.set(0,1.9,0);
+  pv.add(W(new THREE.IcosahedronGeometry(1.3,0),GREEN,0xffffff));
+  const bar=new THREE.BoxGeometry(0.55,0.55,4.4);bar.translate(0,0,-2.5);pv.add(W(bar,INK,0xc9dcc9));
+  g.add(pv);g.userData.pv=pv;
+  return g;
+}
+for(let i=0;i<9;i++){const m=buildOutpost();m.visible=false;scene.add(m);outposts.push({m:m,pv:m.userData.pv,alive:false,hp:0,cool:0,burst:0,zone:-1,wp:V()});}
+function zoneAt(p){return zones.findIndex(z=>p.distanceTo(z.p)<ZR);}
+function canBuild(){
+  if(S.mode!=='zone'||ore<ORE_COST)return false;
+  const zi=zoneAt(pos);if(zi<0||zones[zi].owner!==1)return false;
+  if(outposts.filter(o=>o.alive&&o.zone===zi).length>=3)return false;
+  return outposts.some(o=>!o.alive);
+}
+function tryBuild(){
+  if(mode!=='play')return;
+  if(!canBuild()){
+    if(S.mode!=='zone')return;
+    const zi=zoneAt(pos);
+    toast(ore<ORE_COST?'Need '+ORE_COST+' ore. Shoot asteroids.':zi<0?'Fly inside a zone you hold':zones[zi].owner!==1?'Take this zone first':'This zone has 3 outposts',1.4);return;
+  }
+  const o=outposts.find(x=>!x.alive),zi=zoneAt(pos);
+  ore-=ORE_COST;o.alive=true;o.hp=150;o.cool=1;o.burst=0;o.zone=zi;
+  o.m.position.copy(pos).addScaledVector(fwdV,-6);o.m.rotation.y=rnd(0,6);o.m.visible=true;
+  boom(o.m.position,GREEN,3,8);toast('Outpost built in zone '+zones[zi].n,1.4);
+}
+(function(){
+  const el=$('buildBtn');
+  el.addEventListener('pointerdown',e=>{e.preventDefault();el.classList.add('on');tryBuild();});
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>el.addEventListener(t,()=>el.classList.remove('on')));
+  addEventListener('keydown',e=>{if(e.key==='b'||e.key==='B')tryBuild();});
+})();
+function stepOutposts(dt){
+  for(const o of outposts){
+    if(!o.alive)continue;
+    o.m.getWorldPosition(o.wp);o.wp.y+=1.9;
+    let best=null,bd=320;
+    reds.forEach(r=>{if(!r.alive)return;const d=r.m.position.distanceTo(o.wp);if(d<bd){bd=d;best=r;}});
+    o.m.rotation.y+=dt*0.3;
+    if(!best)continue;
+    const aim=V().copy(best.m.position).addScaledVector(best.vel,bd/300).sub(o.wp).normalize();
+    const local=aim.clone().applyQuaternion(o.m.quaternion.clone().invert());
+    o.pv.quaternion.setFromUnitVectors(NZ,local);
+    o.cool-=dt;
+    if(o.cool<=0){
+      const sd=aim.clone().add(V(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(0.03)).normalize();
+      shoot(V().copy(o.wp).addScaledVector(sd,4.5),sd,300,'g','o',8,null);
+      o.burst++;if(o.burst>=3){o.burst=0;o.cool=rnd(1.1,1.8);}else o.cool=0.12;
+    }
+  }
+  const b=$('buildBtn');b.classList.toggle('ready',canBuild());
+}
+
 // GREEN PHONE EDIT: territory capture and scoring
 const ZCOL={'0':0x8a8f94,'1':GREEN,'-1':0xc8362b};
 function stepZones(dt){
@@ -909,6 +1012,7 @@ function stepZones(dt){
     let g=0,r=0;
     if(pos.distanceTo(z.p)<ZR)g++;
     allies.forEach(a=>{if(a.alive&&a.m.position.distanceTo(z.p)<ZR)g++;});
+    const zi=zones.indexOf(z);outposts.forEach(o=>{if(o.alive&&o.zone===zi)g++;});
     reds.forEach(a=>{if(a.alive&&a.m.position.distanceTo(z.p)<ZR)r++;});
     if(g!==r)z.c=clamp(z.c+0.16*(g-r)*dt,-1,1);
     if(z.c>=1)z.owner=1;else if(z.c<=-1)z.owner=-1;
@@ -1172,7 +1276,7 @@ function step(dt){
   }
 
   if(S.mode==='hunt')stepMothership(dt);
-  if(S.mode==='zone')stepZones(dt);
+  if(S.mode==='zone'){stepOre(dt);stepOutposts(dt);stepZones(dt);}
   if(S.mode==='fuel')stepFuel(dt);
   if(mode!=='play')return;
 
@@ -1188,6 +1292,7 @@ function step(dt){
     if(b.team==='r'){
       if(segHit(a,p,pos,2.4)){hit=true;playerHit(0.025);}
       else for(const f of allies){if(f.alive&&segHit(a,p,f.m.position,3)){hit=true;f.hp-=b.dmg;boom(p,GREEN,1,1);if(f.hp<=0)killCraft(f,false);break;}}
+      if(!hit)for(const o of outposts){if(o.alive&&segHit(a,p,o.m.position,3.8)){hit=true;o.hp-=b.dmg;boom(p,GREEN,1,1);if(o.hp<=0){o.alive=false;o.m.visible=false;boom(o.m.position,GREEN,6,14);toast('Outpost lost in zone '+zones[o.zone].n,1.5);}break;}}
     }else{
       const byP=b.owner==='p';
       for(const m of rocks){
@@ -1243,6 +1348,7 @@ function step(dt){
   $('heatLbl').textContent=overheat?'COOLING DOWN':'BARREL HEAT';
   let h=MODES[S.mode].n+'  '+SH.name+'<br>Speed '+Math.round(speed);
   if(S.mode==='fuel')h+='<br>Distance '+(farthest/1000).toFixed(2)+' km';else if(S.mode!=='zone')h+='<br>Score '+score;
+  if(S.mode==='zone')h+='<br>Ore '+ore+'  Outposts '+outposts.filter(o=>o.alive).length;
   h+='<br>Kills '+kills+'<br>Hits taken '+hitsTaken;
   if(S.steer==='tilt'&&!tRaw)h+='<br>No tilt sensor yet';
   hud.innerHTML=h;
