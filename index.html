@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Polygon Starfighter</title>
-<!-- GREEN PHONE EDIT: v8 adds ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
+<!-- GREEN PHONE EDIT: v9 adds Story mode, a ten mission campaign with briefings and ship unlocks. v8 added ore harvesting and buildable outpost turrets in Territory. v7 added a cockpit view toggle. v6 added Hover race mode, a speeder skimming the ground around a track. v5 added mothership turrets, three maps, Territory and Long haul modes, homing mines. v4 added Mothership Hunt. v3, wireframe landing screen, five green ships, laser with barrel heat, breakable asteroids, enemy ships -->
 <style>
 :root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
   --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
@@ -73,7 +73,7 @@ body.playing .menu{display:none}
 .seg button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
 input[type=range]{width:150px;accent-color:var(--blue)}
 /* GREEN PHONE EDIT: v4 mode picker and mothership health bar */
-.modesel{flex:none;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:3px}
+.modesel{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:3px}
 .maps{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 6px}
 .maps button{border:2px solid var(--edge);background:#fff;border-radius:8px;padding:5px 2px;font-size:12px;font-weight:900;color:var(--ink)}
 .maps button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
@@ -107,6 +107,21 @@ body.playing.cockpitview .cockpit{display:block}
 body.playing.zonemode .buildbtn{display:flex}
 .buildbtn.ready{opacity:1;background:#dcefdc;border-color:var(--green);color:#24552a}
 .buildbtn.on{transform:translateY(2px);box-shadow:0 1px 0 #b9b6ab}
+/* GREEN PHONE EDIT: v9 story mission picker and briefing */
+.storybox{display:none;margin:0 0 6px}
+body.storymenu .storybox{display:block}
+body.storymenu #mapBlock{display:none}
+.mlist{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-bottom:4px}
+.mlist button{border:2px solid var(--edge);background:#fff;border-radius:6px;padding:5px 0;font-size:12px;font-weight:900;color:var(--ink)}
+.mlist button.sel{background:#f6dca5;border-color:#c27a12}
+.mlist button.done{background:#dcefdc;border-color:var(--green);color:#24552a}
+.mlist button.done.sel{background:#f6dca5;border-color:#c27a12;color:var(--ink)}
+.mlist button:disabled{opacity:.35}
+.mtitle{font-size:15px;font-weight:900}
+.mgoal{font-size:12px;color:var(--ink2)}
+.ships button.locked{opacity:.35}
+.brieftext{font-size:14px;line-height:1.45;color:var(--ink);margin:8px 0;text-align:left}
+.briefgoal{font-size:13px;font-weight:900;color:#24552a;margin:6px 0 2px}
 </style>
 </head>
 <body>
@@ -152,10 +167,11 @@ body.playing.zonemode .buildbtn{display:flex}
 <div class="menu" id="menu">
   <div class="logo">POLYGON <span>STARFIGHTER</span></div>
   <div class="lbl2" style="margin-top:6px">MODE</div>
-  <div class="modesel" id="modes"><button data-m="free">Free</button><button data-m="hunt">Hunt</button><button data-m="zone">Territory</button><button data-m="fuel">Long haul</button><button data-m="hover">Hover race</button></div>
+  <div class="modesel" id="modes"><button data-m="story">Story</button><button data-m="free">Free</button><button data-m="hunt">Hunt</button><button data-m="zone">Territory</button><button data-m="fuel">Long haul</button><button data-m="hover">Hover race</button></div>
   <div class="modedesc" id="modeDesc"></div>
-  <div class="lbl2">MAP</div>
-  <div class="maps" id="maps"><button data-p="belt">Asteroid belt</button><button data-p="ice">Ice field</button><button data-p="scrap">Scrapyard</button></div>
+  <div class="storybox"><div class="lbl2">MISSION</div><div class="mlist" id="mlist"></div><div class="mtitle" id="mTitle"></div><div class="mgoal" id="mGoal"></div></div>
+  <div id="mapBlock"><div class="lbl2">MAP</div>
+  <div class="maps" id="maps"><button data-p="belt">Asteroid belt</button><button data-p="ice">Ice field</button><button data-p="scrap">Scrapyard</button></div></div>
   <div class="lbl2">SHIP</div>
   <div class="ships" id="ships"></div>
   <div class="shipname" id="shipName"></div>
@@ -170,6 +186,14 @@ body.playing.zonemode .buildbtn{display:flex}
     <h1 id="endTitle">Run over</h1>
     <p id="endMsg" style="text-align:center;font-size:14px;color:var(--ink2)"></p>
     <div class="mrow"><button id="endMenuBtn">Main menu</button><button class="go" id="againBtn">Play again</button></div>
+  </div>
+</div>
+<div class="overlay" id="brief">
+  <div class="card">
+    <h1 id="bTitle">Mission</h1>
+    <div class="brieftext" id="bText"></div>
+    <div class="briefgoal" id="bGoal"></div>
+    <div class="mrow"><button id="bBack">Back</button><button class="go" id="bStart">Start mission</button></div>
   </div>
 </div>
 <div class="overlay" id="settings">
@@ -187,7 +211,7 @@ body.playing.zonemode .buildbtn{display:flex}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // GREEN PHONE EDIT: settings with safe storage
-const DEF={view:'chase',steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
+const DEF={story:0,mission:0,view:'chase',steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1,ship:0,mode:'free',map:'belt',bests:{}};
 let S=Object.assign({},DEF);
 try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
 if(!S.bests)S.bests={};
@@ -284,6 +308,7 @@ const tmpQ=new THREE.Quaternion(),mat4=new THREE.Matrix4();
 
 // GREEN PHONE EDIT: v5 modes and maps
 const MODES={
+  story:{n:'Story',d:''},
   free:{n:'Free',d:'Fly the field. Shoot rocks, mines and fighters, and fly through the rings.'},
   hunt:{n:'Hunt',d:'Chase a slow mothership. It launches fighters and its turrets shoot back. Knock out turrets for bonus points.'},
   zone:{n:'Territory',d:'You and two green wingmen fight the red team for three zones. Shoot asteroids for ore, then build outpost turrets inside zones you hold. First team to 1000 wins.'},
@@ -562,20 +587,87 @@ function setFromSlider(e){const r=slider.getBoundingClientRect();throttle=clamp(
 slider.addEventListener('pointerdown',e=>{e.preventDefault();try{slider.setPointerCapture(e.pointerId);}catch(_){}setFromSlider(e);});
 slider.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')setFromSlider(e);});
 
+// GREEN PHONE EDIT: v9 story campaign. the Verdant Wing, a green squadron, against the Red Choir raiders
+const STORY=[
+  {t:'First Light',map:'belt',mode:'free',
+   b:'You are Seven, the newest pilot in the Verdant Wing. The belt outpost needs a clear lane before the supply barges come through. Show the flight leads you can hit what you aim at.',
+   g:'Break 8 asteroids',done:()=>stat.rocks>=8,prog:()=>'Asteroids '+stat.rocks+'/8',d:'Lane is clear. The flight leads noticed.'},
+  {t:'Ring Run',map:'belt',mode:'free',
+   b:'Navigation beacons are up across the belt. Fly the course and prove you can thread a needle at speed.',
+   g:'Fly through 5 rings',done:()=>gates>=5,prog:()=>'Rings '+gates+'/5',d:'Clean lines. The Hornet is yours to fly now.',unlock:1},
+  {t:'Contact',map:'belt',mode:'free',
+   b:'Red fighters slipped into the belt overnight. Nobody knows who sent them yet. Drive them out.',
+   g:'Shoot down 4 fighters',done:()=>kills>=4,prog:()=>'Fighters '+kills+'/4',d:'Wreckage carries a red choir sigil. Command calls them the Red Choir.'},
+  {t:'The Carrier',map:'scrap',mode:'hunt',
+   b:'The fighters come from a carrier hiding in the scrapyard. It is slow, it bites back, and it keeps launching. Bring it down.',
+   g:'Destroy the mothership',done:()=>stat.ms>=1,prog:()=>'Motherships '+stat.ms+'/1',d:'Carrier down. Engineering hands you the Ox, built for this work.',unlock:2},
+  {t:'Cold Trail',map:'ice',mode:'fuel',
+   b:'A damaged Choir scout fled into the ice field. Follow its trail. Fuel is thin out there, so grab every pod you see.',
+   g:'Travel 3 km',done:()=>farthest>=3000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/3 km',fail:'Out of fuel short of the trail.',d:'The trail ends at a buried relay. The Choir has been listening.'},
+  {t:'Speeder Trials',map:'ice',mode:'hover',
+   b:'The relay sits under the ice. Only speeders can reach it, so the Wing runs trials on the frozen course first.',
+   g:'Finish 3 laps',done:()=>false,hover:999,d:'You qualified. The Mantis is cleared for you.',unlock:3},
+  {t:'Hold the Line',map:'belt',mode:'zone',
+   b:'The Choir moves on the belt stations in force. You and two wingmen hold three zones. Mine the rocks and build outposts if you can.',
+   g:'Win the territory battle',done:()=>false,fail:'The Choir took the belt.',d:'The belt holds. The Choir pulls back to the scrapyard.'},
+  {t:'Scrap Run',map:'scrap',mode:'hover',
+   b:'A courier route runs through the old wreck yards. Run it fast enough and the Choir never sees you pass.',
+   g:'Finish 3 laps under 2:30',done:()=>false,hover:150,fail:'Too slow. The Choir spotted the run.',d:'Delivered. The Furnace is unlocked.',unlock:4},
+  {t:'Long Way Home',map:'scrap',mode:'fuel',
+   b:'Your squadron got scattered. Fly home through Choir space on whatever fuel you can find.',
+   g:'Travel 6 km',done:()=>farthest>=6000,prog:()=>'Distance '+(farthest/1000).toFixed(2)+'/6 km',fail:'Tank empty. Rescue drags you home.',d:'Home. Intel points to the Choir flagship in the ice.'},
+  {t:'The Red Choir',map:'ice',mode:'hunt',
+   b:'Two Choir carriers guard the ice. Break them both and the raids end. The whole Wing is watching.',
+   g:'Destroy 2 motherships',done:()=>stat.ms>=2,prog:()=>'Motherships '+stat.ms+'/2',d:'Both carriers down. The Red Choir goes quiet. Welcome to the Wing for good, Seven.'}
+];
+const UNLOCK_AT=[0,2,4,6,8];
+function shipUnlocked(i){return (S.story||0)>=UNLOCK_AT[i];}
+const stat={rocks:0,ms:0};
+let storyRun=-1,savedMode=null,savedMap=null;
+function storyMission(){return STORY[clamp(S.mission||0,0,STORY.length-1)];}
+function missionEnd(ok,msg){
+  running=false;mode='over';
+  const i=storyRun,M=STORY[i];
+  if(ok&&(S.story||0)<=i){S.story=i+1;saveS();}
+  $('endTitle').textContent=ok?'Mission complete':'Mission failed';
+  $('endMsg').textContent=ok?(M.d+(msg?' '+msg:'')):(msg||M.fail||'Try again.');
+  $('againBtn').textContent=ok?(i+1<STORY.length?'Next mission':'Play again'):'Retry';
+  $('againBtn').dataset.next=ok&&i+1<STORY.length?'1':'';
+  $('endcard').style.display='flex';
+}
+function storyCheck(){
+  if(storyRun<0||mode!=='play')return;
+  if(STORY[storyRun].done())missionEnd(true);
+}
+
 // GREEN PHONE EDIT: menu
 let mode='menu',running=false,started=false;
 function bar(label,v){return '<div class="stat"><b>'+label+'</b><div class="bar"><i style="width:'+Math.round(clamp(v,0.05,1)*100)+'%"></i></div></div>';}
 function bestKey(){return S.mode+'_'+S.map;}
 function paintMenu(){
   const sb=$('ships');sb.innerHTML='';
-  SHIPS.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;if(i===S.ship)b.className='sel';b.addEventListener('click',()=>{S.ship=i;saveS();SH=SHIPS[i];setShip(i);paintMenu();});sb.appendChild(b);});
+  const isStory=S.mode==='story';
+  if(isStory&&!shipUnlocked(S.ship)){S.ship=0;SH=SHIPS[0];setShip(0);}
+  SHIPS.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;const lk=isStory&&!shipUnlocked(i);if(i===S.ship)b.className='sel';if(lk)b.classList.add('locked');
+    b.addEventListener('click',()=>{if(lk){$('shipPerk').textContent='Locked. Unlocks after mission '+UNLOCK_AT[i]+' in Story.';return;}S.ship=i;saveS();SH=SHIPS[i];setShip(i);paintMenu();});sb.appendChild(b);});
+  document.body.classList.toggle('storymenu',isStory);
+  if(isStory){
+    const ml=$('mlist');ml.innerHTML='';
+    if((S.mission||0)>(S.story||0))S.mission=S.story||0;
+    STORY.forEach((m,i)=>{const b=document.createElement('button');b.textContent=i+1;b.disabled=i>(S.story||0);
+      if(i<(S.story||0))b.classList.add('done');if(i===S.mission)b.classList.add('sel');
+      b.addEventListener('click',()=>{S.mission=i;saveS();paintMenu();});ml.appendChild(b);});
+    const M=storyMission();
+    $('mTitle').textContent=(S.mission+1)+'. '+M.t+((S.story||0)>S.mission?'  (done)':'');
+    $('mGoal').textContent='Goal: '+M.g;
+  }
   const s=SHIPS[S.ship];
   $('shipName').textContent=s.name;$('shipPerk').textContent=s.perk;
   $('stats').innerHTML=bar('Speed',s.speed/175)+bar('Turning',s.turn/2)+bar('Firepower',s.dmg*s.rate/170)+bar('Fire rate',s.rate/16)+bar('Cooling',(s.cool/s.heat)/28);
   document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('sel',b.dataset.m===S.mode));
   document.querySelectorAll('#maps button').forEach(b=>b.classList.toggle('sel',b.dataset.p===S.map));
-  $('modeDesc').textContent=MODES[S.mode].d;
-  const bk=S.bests[bestKey()];
+  $('modeDesc').textContent=S.mode==='story'?((S.story||0)>=STORY.length?'Campaign complete. Replay any mission.':'Ten missions with the Verdant Wing. Finish missions to unlock ships for Story.'):MODES[S.mode].d;
+  const bk=S.mode==='story'?0:S.bests[bestKey()];
   $('best').textContent=bk?('Best here: '+(S.mode==='fuel'?(bk/1000).toFixed(2)+' km':S.mode==='hover'?fmtT(bk):bk)):'';
 }
 document.querySelectorAll('#modes button').forEach(b=>b.addEventListener('click',()=>{S.mode=b.dataset.m;saveS();paintMenu();}));
@@ -631,9 +723,34 @@ function resetRun(){
 $('launchBtn').addEventListener('click',async()=>{
   try{if(isIOS)await DeviceOrientationEvent.requestPermission();}catch(e){}
   if(!started){try{await document.documentElement.requestFullscreen();}catch(e){}try{await screen.orientation.lock('landscape');}catch(e){}started=true;}
+  if(S.mode==='story'){openBrief();return;}
   startRun();
 });
+// GREEN PHONE EDIT: v9 briefing, then the mission runs on the matching mode and map
+function openBrief(){
+  const M=storyMission();
+  $('bTitle').textContent='Mission '+(S.mission+1)+': '+M.t;$('bText').textContent=M.b;$('bGoal').textContent='Objective: '+M.g;
+  $('brief').style.display='flex';
+}
+$('bBack').addEventListener('click',()=>{$('brief').style.display='none';});
+$('bStart').addEventListener('click',()=>{$('brief').style.display='none';beginMission(S.mission);});
+function beginMission(i){
+  const M=STORY[i];
+  if(storyRun<0){savedMode='story';savedMap=S.map;}
+  storyRun=i;S.mission=i;
+  S.mode=M.mode;if(S.map!==M.map){S.map=M.map;buildMap(M.map);}
+  if(!shipUnlocked(S.ship))S.ship=0;
+  startRun();
+  toast('Mission '+(i+1)+': '+M.g,3);
+}
+function endStory(){
+  if(storyRun<0)return;
+  storyRun=-1;S.mode=savedMode||'story';
+  if(savedMap&&S.map!==savedMap){S.map=savedMap;buildMap(savedMap);}
+  saveS();
+}
 function startRun(){
+  stat.rocks=0;stat.ms=0;
   SH=SHIPS[S.ship];setShip(S.ship);
   $('endcard').style.display='none';
   resetRun();
@@ -650,13 +767,15 @@ function startRun(){
   if(S.mode==='hover')paintSettings();
 }
 function toMenu(){
+  endStory();$('againBtn').textContent='Play again';
   $('settings').style.display='none';$('endcard').style.display='none';
   mode='menu';running=false;document.body.classList.remove('playing','topbar','hovermode','zonemode');
   document.querySelector('.topbtns').style.display='none';
   hideAll();pos.set(0,0,0);paintMenu();paintSettings();
 }
 function saveBest(v){const k=bestKey();if(!S.bests[k]||v>S.bests[k]){S.bests[k]=v;saveS();return true;}return false;}
-function endRun(title,msg){
+function endRun(title,msg,ok){
+  if(storyRun>=0){missionEnd(!!ok,ok?'':null);return;}
   running=false;mode='over';
   $('endTitle').textContent=title;$('endMsg').textContent=msg;$('endcard').style.display='flex';
 }
@@ -669,9 +788,12 @@ function openSettings(inGame){
 $('ctrlBtn').addEventListener('click',()=>openSettings(false));
 $('pauseBtn').addEventListener('click',()=>{if(mode==='play')openSettings(true);});
 $('closeSetBtn').addEventListener('click',()=>{$('settings').style.display='none';if(mode==='play'){running=true;last=performance.now();}});
-$('toMenuBtn').addEventListener('click',()=>{if(S.mode==='free'||S.mode==='hunt')saveBest(score);toMenu();});
+$('toMenuBtn').addEventListener('click',()=>{if(storyRun<0&&(S.mode==='free'||S.mode==='hunt'))saveBest(score);toMenu();});
 $('endMenuBtn').addEventListener('click',toMenu);
-$('againBtn').addEventListener('click',startRun);
+$('againBtn').addEventListener('click',()=>{
+  if(storyRun>=0){const n=$('againBtn').dataset.next?storyRun+1:storyRun;beginMission(n);return;}
+  startRun();
+});
 $('recenterBtn').addEventListener('click',recenter);
 // GREEN PHONE EDIT: v7 view toggle
 function paintView(){
@@ -708,7 +830,7 @@ function playerHit(leak){
 }
 function killRock(m,byPlayer){
   boom(m.position,m.userData.col,m.userData.r,Math.min(14,4+Math.round(m.userData.r/2)));
-  if(byPlayer)score+=Math.round(m.userData.r*2);
+  if(byPlayer){score+=Math.round(m.userData.r*2);stat.rocks++;}
   if(byPlayer&&S.mode==='zone')dropOre(m.position,m.userData.r);
   placeFar(m);
   m.userData.hp=m.userData.maxhp;
@@ -828,7 +950,7 @@ function spawnMothership(){
 function killMothership(){
   ms.alive=false;
   for(let i=0;i<6;i++){boom(ms.centers[i%ms.centers.length],i%2?MS_LINE:0xc27a12,14,16);}
-  shake=0.8;score+=1000*ms.wave;
+  shake=0.8;score+=1000*ms.wave;stat.ms++;
   toast('MOTHERSHIP DOWN +'+(1000*ms.wave),3);
   ms.m.visible=false;ms.wave++;ms.nextT=6;
 }
@@ -1027,7 +1149,7 @@ function stepZones(dt){
   const chip=z=>'<span class="zc" style="background:'+(z.owner===1?'#3f8a3f':z.owner===-1?'#c8362b':'#8a8f94')+'">'+z.n+'</span>';
   $('msLbl').innerHTML='<span style="color:#24552a">GREEN '+Math.floor(gScore)+'</span>  '+zones.map(chip).join('')+'  <span style="color:#c8362b">RED '+Math.floor(rScore)+'</span>';
   $('msFill').style.width=(gScore/10)+'%';$('msFill').style.background='#3f8a3f';$('msFill2').style.width=(rScore/10)+'%';
-  if(gScore>=1000)endRun('Green team wins','You took the territory. Kills '+kills+'. Hits taken '+hitsTaken+'.'+(saveBest(1000-Math.floor(rScore))?' New best margin.':''));
+  if(gScore>=1000)endRun('Green team wins','You took the territory. Kills '+kills+'. Hits taken '+hitsTaken+'.'+(saveBest(1000-Math.floor(rScore))?' New best margin.':''),true);
   else if(rScore>=1000)endRun('Red team wins','They held the zones. Green reached '+Math.floor(gScore)+'. Kills '+kills+'.');
 }
 
@@ -1172,6 +1294,7 @@ function hoverStep(dt){
       hv.laps.push(hv.lapT);if(!hv.best||hv.lapT<hv.best)hv.best=hv.lapT;
       if(hv.lap>=HOVER.laps){
         const k='hover_'+S.map,prev=S.bests[k],nb=!prev||hv.t<prev;if(nb){S.bests[k]=hv.t;saveS();}
+        if(storyRun>=0){const lim=STORY[storyRun].hover;missionEnd(hv.t<=lim,'Time '+fmtT(hv.t)+'.');return;}
         endRun('Finished','Total '+fmtT(hv.t)+'. Best lap '+fmtT(hv.best)+'. Bumps '+hitsTaken+'.'+(nb?' New best time.':''));return;
       }
       toast('Lap '+(hv.lap+1)+'  last lap '+fmtT(hv.lapT),1.6);hv.lap++;hv.lapT=0;
@@ -1210,6 +1333,7 @@ function hoverStep(dt){
 const hud=$('hud');
 function step(dt){
   if(S.mode==='hover'){hoverStep(dt);return;}
+  storyCheck();if(mode!=='play')return;
   const tilt=tiltInput();
   let turn=0,pitch=0;
   if(S.steer==='tilt'&&tilt)turn=tilt.turn;
@@ -1350,6 +1474,7 @@ function step(dt){
   if(S.mode==='fuel')h+='<br>Distance '+(farthest/1000).toFixed(2)+' km';else if(S.mode!=='zone')h+='<br>Score '+score;
   if(S.mode==='zone')h+='<br>Ore '+ore+'  Outposts '+outposts.filter(o=>o.alive).length;
   h+='<br>Kills '+kills+'<br>Hits taken '+hitsTaken;
+  if(storyRun>=0&&STORY[storyRun].prog)h+='<br>Goal '+STORY[storyRun].prog();
   if(S.steer==='tilt'&&!tRaw)h+='<br>No tilt sensor yet';
   hud.innerHTML=h;
 
