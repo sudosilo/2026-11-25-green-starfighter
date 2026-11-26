@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Polygon Starfighter</title>
+<!-- GREEN PHONE EDIT: v2 -->
+<!-- GREEN PHONE EDIT: Polygon Starfighter v1, flight model only -->
+<style>
+/* GREEN PHONE EDIT: v2 restyle to match MobbyHill, off white drafting look and ink wireframe */
+:root{--panel:#eceae3;--panel2:#dedbd1;--edge:#9d9a8f;--ink:#2e3338;--ink2:#5f6469;--yellow:#f2c230;--red:#c8362b;--blue:#2a62b0;--green:#3f8a3f;--orange:#d2601a;
+  --ui:"Roboto Condensed","Arial Narrow","sans-serif-condensed",system-ui,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#eef0ec;color:var(--ink);font-family:var(--ui);touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+canvas{display:block}
+.hud{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:10px;font-size:13px;font-weight:800;line-height:1.5;background:var(--panel);border:2px solid var(--edge);padding:5px 10px;border-radius:8px;pointer-events:none;font-variant-numeric:tabular-nums}
+.topbtns{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:10px;display:flex;gap:6px}
+.chip{background:var(--panel);border:2px solid var(--edge);border-radius:7px;padding:7px 12px;font:inherit;font-size:13px;font-weight:800;color:var(--ink)}
+.pad{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:170px;height:170px}
+.pad .b{position:absolute;width:58px;height:58px;border-radius:9px;background:#fff;border:2px solid var(--edge);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:var(--ink);box-shadow:0 3px 0 #b9b6ab}
+.pad .b.on{background:#f6dca5;border-color:#c27a12;transform:translateY(2px);box-shadow:0 1px 0 #b9b6ab}
+.b.up{left:56px;top:0}.b.dn{left:56px;bottom:0}.b.lf{left:0;top:56px}.b.rt{right:0;top:56px}
+.slider{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:66px;height:62vh;max-height:300px;border-radius:10px;border:2px solid var(--edge);overflow:hidden;background:repeating-linear-gradient(0deg,var(--panel) 0 9px,var(--panel2) 9px 12px)}
+.slider .fill{position:absolute;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,#cfe8cf 0 9px,#b3d8b3 9px 12px);border-top:3px solid var(--green)}
+.slider .lbl{position:absolute;left:0;right:0;top:6px;text-align:center;font-size:11px;font-weight:900;color:var(--ink)}
+.arrow{position:fixed;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:22px solid var(--orange);pointer-events:none;display:none}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(238,240,236,.86);padding:16px;z-index:20}
+.card{background:var(--panel);border:2px solid var(--edge);border-radius:12px;padding:16px;max-width:460px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 6px 0 #b9b6ab}
+.card h1{margin:0 0 6px;font-size:22px;font-weight:900;text-align:center}
+.card p{margin:6px 0;font-size:14px;color:var(--ink2);text-align:center}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;font-size:14px;font-weight:800}
+.seg{display:flex;gap:4px}
+.seg button{border:2px solid var(--edge);background:#fff;border-radius:7px;padding:7px 10px;font:inherit;font-size:13px;font-weight:800;color:var(--ink)}
+.seg button.sel{background:#cfe0f4;border-color:var(--blue);color:#173e75}
+.go{display:block;width:100%;margin-top:12px;padding:13px;border:2px solid #b58d12;border-radius:9px;background:var(--yellow);color:#3a2f05;font:inherit;font-size:17px;font-weight:900}
+.flash{position:fixed;inset:0;pointer-events:none;background:var(--red);opacity:0;transition:opacity .25s}
+input[type=range]{width:150px;accent-color:var(--blue)}
+</style>
+</head>
+<body>
+<div class="hud" id="hud"></div>
+<div class="topbtns">
+  <button class="chip" id="recenterBtn">Recenter</button>
+  <button class="chip" id="setBtn">Settings</button>
+</div>
+<div class="pad" id="pad">
+  <div class="b up" data-k="up">&#9650;</div>
+  <div class="b dn" data-k="dn">&#9660;</div>
+  <div class="b lf" data-k="lf">&#9664;</div>
+  <div class="b rt" data-k="rt">&#9654;</div>
+</div>
+<div class="slider" id="slider"><div class="fill" id="fill"></div><div class="lbl">THROTTLE</div></div>
+<div class="arrow" id="arrow"></div>
+<div class="flash" id="flash"></div>
+
+<div class="overlay" id="overlay">
+  <div class="card">
+    <h1 id="title">Polygon Starfighter</h1>
+    <p id="intro">Hold the phone sideways. Tilt left and right to turn, tilt forward to dive and back to climb. Slide your thumb up the throttle bar on the right to go faster, like an ether wand. Fly through the orange rings.</p>
+    <div class="row"><span>Steering</span><div class="seg" data-opt="steer"><button data-v="tilt">Tilt</button><button data-v="buttons">Buttons</button></div></div>
+    <div class="row"><span>Throttle</span><div class="seg" data-opt="throttle"><button data-v="slider">Slider</button><button data-v="tilt">Tilt fwd/back</button></div></div>
+    <div class="row"><span>Invert climb/dive</span><div class="seg" data-opt="invPitch"><button data-v="false">Off</button><button data-v="true">On</button></div></div>
+    <div class="row"><span>Invert turning</span><div class="seg" data-opt="invTurn"><button data-v="false">Off</button><button data-v="true">On</button></div></div>
+    <div class="row"><span>Tilt sensitivity</span><input type="range" id="sens" min="0.4" max="2" step="0.1"></div>
+    <button class="go" id="goBtn">Launch</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// GREEN PHONE EDIT: settings with safe storage
+const DEF={steer:'tilt',throttle:'slider',invPitch:false,invTurn:false,sens:1};
+let S=Object.assign({},DEF);
+try{const s=JSON.parse(localStorage.getItem('pf_settings')||'null');if(s)S=Object.assign(S,s);}catch(e){}
+function saveS(){try{localStorage.setItem('pf_settings',JSON.stringify(S));}catch(e){}}
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const $=id=>document.getElementById(id);
+
+// GREEN PHONE EDIT: renderer and scene, light theme with transparent canvas over gradient
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+renderer.setSize(innerWidth,innerHeight);
+renderer.setClearColor(0xeef0ec,1);
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0xeef0ec,200,1100);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,8000);
+scene.add(new THREE.HemisphereLight(0xffffff,0xd8c8e8,0.75));
+const sun=new THREE.DirectionalLight(0xfff1e0,0.75);sun.position.set(1,1.4,0.6);scene.add(sun);
+
+// GREEN PHONE EDIT: wireframe helper. paper colored solid hides back lines, ink edges on top
+const PAPER=0xeef0ec,INK=0x2e3338;
+function W(geo,line,fill,noFog){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:fill||PAPER,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1,fog:!noFog})));
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,1),new THREE.LineBasicMaterial({color:line||INK,fog:!noFog})));
+  return g;
+}
+
+// GREEN PHONE EDIT: low poly ship, nose points along local -Z
+function buildShip(){
+  const g=new THREE.Group();
+  const bg=new THREE.ConeGeometry(0.7,4.2,4);bg.rotateY(Math.PI/4);bg.rotateX(-Math.PI/2);
+  g.add(W(bg,INK,0xffffff));
+  const pg=new THREE.OctahedronGeometry(0.45);pg.scale(0.8,0.6,1.6);pg.translate(0,0.42,-0.3);
+  g.add(W(pg,0x2a62b0,0xcfe0f4));
+  const sh=new THREE.Shape();sh.moveTo(0,0);sh.lineTo(2.8,1.4);sh.lineTo(2.8,2.0);sh.lineTo(0,1.6);sh.lineTo(0,0);
+  const wr=new THREE.ExtrudeGeometry(sh,{depth:0.14,bevelEnabled:false});wr.rotateX(Math.PI/2);wr.translate(0.3,0.07,-0.9);
+  g.add(W(wr,0xd2601a,0xfbe6d6));
+  const wl=wr.clone();wl.scale(-1,1,1);
+  g.add(W(wl,0xd2601a,0xfbe6d6));
+  const fg=new THREE.ConeGeometry(0.5,1.2,3);fg.scale(0.25,1,1);fg.translate(0,0.75,1.2);
+  g.add(W(fg,0xd2601a,0xfbe6d6));
+  const engs=[];
+  [-0.55,0.55].forEach(x=>{
+    const eg=new THREE.CylinderGeometry(0.26,0.32,1.1,6);eg.rotateX(Math.PI/2);eg.translate(x,-0.05,1.5);
+    g.add(W(eg,INK,0xdedbd1));
+    const glow=new THREE.Mesh(new THREE.ConeGeometry(0.24,1,6),new THREE.MeshBasicMaterial({color:0xf2c230}));
+    glow.rotation.x=Math.PI/2;glow.position.set(x,-0.05,2.4);g.add(glow);engs.push(glow);
+  });
+  g.userData.engs=engs;
+  return g;
+}
+const ship=new THREE.Group();scene.add(ship);
+const shipMesh=buildShip();ship.add(shipMesh);
+
+// GREEN PHONE EDIT: rocky asteroids, jittered icosahedrons
+const ROCK_COLORS=[0x7a5c3c,0x5f6469,0x8a6a2a,0x4a6a88];
+function rockGeo(r){
+  const g=new THREE.IcosahedronGeometry(r,1);
+  const p=g.attributes.position;const map={};
+  for(let i=0;i<p.count;i++){
+    const k=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);
+    if(!map[k])map[k]=0.75+Math.random()*0.45;
+    const f=map[k];p.setXYZ(i,p.getX(i)*f,p.getY(i)*f,p.getZ(i)*f);
+  }
+  g.computeVertexNormals();return g;
+}
+const FIELD=700;
+const rocks=[];
+for(let i=0;i<110;i++){
+  const r=3+Math.pow(Math.random(),2)*28;
+  const m=W(rockGeo(r),ROCK_COLORS[i%4]);
+  m.position.set((Math.random()*2-1)*FIELD,(Math.random()*2-1)*FIELD,(Math.random()*2-1)*FIELD);
+  if(m.position.length()<60)m.position.z-=200;
+  m.userData={r:r*1.05,spin:new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).multiplyScalar(0.6)};
+  scene.add(m);rocks.push(m);
+}
+
+// GREEN PHONE EDIT: space dust gives the feeling of speed
+const DUST=130,dustN=700;
+const dpos=new Float32Array(dustN*3);
+for(let i=0;i<dustN*3;i++)dpos[i]=(Math.random()*2-1)*DUST;
+const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.BufferAttribute(dpos,3));
+const dust=new THREE.Points(dgeo,new THREE.PointsMaterial({color:0x5f6469,size:0.4}));
+scene.add(dust);
+
+// GREEN PHONE EDIT: far planet with ring, ignores fog so it always shows
+const planet=W(new THREE.IcosahedronGeometry(900,2),0x9aa6b0,PAPER,true);
+planet.position.set(-2200,-500,-4200);scene.add(planet);
+const pring=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.RingGeometry(1150,1500,48,2)),new THREE.LineBasicMaterial({color:0xc4a05a,fog:false}));
+pring.position.copy(planet.position);pring.rotation.x=1.2;pring.rotation.y=0.3;scene.add(pring);
+
+// GREEN PHONE EDIT: gate rings to fly through
+const gate=W(new THREE.TorusGeometry(11,1.3,6,18),0xd2601a,0xf6dca5);
+scene.add(gate);
+let gates=0;
+
+// GREEN PHONE EDIT: flight state
+const pos=new THREE.Vector3(0,0,0);
+const vel=new THREE.Vector3();
+const q=new THREE.Quaternion();
+let speed=0,throttle=0.3,pitchRate=0,yawRate=0,bank=0,shake=0;
+const tmpQ=new THREE.Quaternion(),AX=new THREE.Vector3(1,0,0),AY=new THREE.Vector3(0,1,0),AZ=new THREE.Vector3(0,0,1);
+const MAXSPEED=130;
+
+function placeGate(){
+  const f=new THREE.Vector3(0,0,-1).applyQuaternion(q);
+  const u=new THREE.Vector3(0,1,0).applyQuaternion(q);
+  const r=new THREE.Vector3(1,0,0).applyQuaternion(q);
+  gate.position.copy(pos).addScaledVector(f,380).addScaledVector(u,(Math.random()*2-1)*140).addScaledVector(r,(Math.random()*2-1)*180);
+  gate.lookAt(pos);
+  rocks.forEach(m=>{if(m.position.distanceTo(gate.position)<m.userData.r+25)m.position.addScaledVector(r,m.userData.r+60);});
+}
+placeGate();
+
+// GREEN PHONE EDIT: v2 tilt now uses the same deviceorientation mapping as MobbyHill
+// landscape uses beta for left and right, gamma for forward and back, sign follows the screen
+let tRaw=null,tZero=null;
+const isIOS=typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function';
+function onOri(e){
+  if(e.gamma==null&&e.beta==null)return;
+  const ang=(screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(window.orientation||0);
+  let t,fb;
+  if(ang===90){t=e.beta;fb=e.gamma;}else if(ang===270||ang===-90){t=-e.beta;fb=-e.gamma;}else if(ang===180){t=-e.gamma;fb=e.beta;}else{t=e.gamma;fb=-e.beta;}
+  if(t==null||isNaN(t))return;
+  tRaw={t:t,fb:fb||0};
+  if(!tZero)tZero={t:tRaw.t,fb:tRaw.fb};
+}
+addEventListener('deviceorientation',onOri);
+function recenter(){if(tRaw)tZero={t:tRaw.t,fb:tRaw.fb};}
+function tiltInput(){
+  if(!tRaw||!tZero)return null;
+  const dz=(v,d)=>Math.abs(v)<d?0:v-Math.sign(v)*d;
+  const turn=clamp(dz(tRaw.t-tZero.t,2)/25*S.sens,-1,1);
+  const fwd=clamp(dz(tRaw.fb-tZero.fb,3)/18*S.sens,-1,1);
+  return {turn:turn,fwd:fwd};
+}
+// GREEN PHONE EDIT: buttons, keyboard, throttle slider
+const keys={up:0,dn:0,lf:0,rt:0,thUp:0,thDn:0};
+document.querySelectorAll('.pad .b').forEach(b=>{
+  const k=b.dataset.k;
+  const on=e=>{e.preventDefault();keys[k]=1;b.classList.add('on');try{b.setPointerCapture(e.pointerId);}catch(_){}};
+  const off=()=>{keys[k]=0;b.classList.remove('on');};
+  b.addEventListener('pointerdown',on);
+  b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
+});
+const keyMap={ArrowUp:'up',ArrowDown:'dn',ArrowLeft:'lf',ArrowRight:'rt',w:'thUp',s:'thDn',W:'thUp',S:'thDn'};
+addEventListener('keydown',e=>{if(keyMap[e.key]){keys[keyMap[e.key]]=1;e.preventDefault();}});
+addEventListener('keyup',e=>{if(keyMap[e.key])keys[keyMap[e.key]]=0;});
+
+const slider=$('slider'),fill=$('fill');
+function setFromSlider(e){
+  const r=slider.getBoundingClientRect();
+  throttle=clamp(1-(e.clientY-r.top)/r.height,0,1);
+}
+slider.addEventListener('pointerdown',e=>{e.preventDefault();try{slider.setPointerCapture(e.pointerId);}catch(_){}setFromSlider(e);});
+slider.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')setFromSlider(e);});
+
+// GREEN PHONE EDIT: settings overlay wiring
+let running=false,started=false;
+function paintSettings(){
+  document.querySelectorAll('.seg').forEach(seg=>{
+    const opt=seg.dataset.opt;
+    seg.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',String(S[opt])===b.dataset.v));
+  });
+  $('sens').value=S.sens;
+  const turnTilt=S.steer==='tilt';
+  const pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt';
+  document.querySelector('.b.lf').style.display=turnTilt?'none':'flex';
+  document.querySelector('.b.rt').style.display=turnTilt?'none':'flex';
+  document.querySelector('.b.up').style.display=pitchTilt?'none':'flex';
+  document.querySelector('.b.dn').style.display=pitchTilt?'none':'flex';
+  slider.style.display=S.throttle==='slider'?'block':'none';
+  $('recenterBtn').style.display=(S.steer==='tilt'||S.throttle==='tilt')?'block':'none';
+}
+document.querySelectorAll('.seg button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const opt=b.parentElement.dataset.opt;let v=b.dataset.v;
+    if(v==='true')v=true;else if(v==='false')v=false;
+    S[opt]=v;saveS();paintSettings();
+  });
+});
+$('sens').addEventListener('input',e=>{S.sens=parseFloat(e.target.value);saveS();});
+paintSettings();
+
+$('goBtn').addEventListener('click',async()=>{
+  try{if(isIOS)await DeviceOrientationEvent.requestPermission();}catch(e){}
+  if(!started){
+    try{await document.documentElement.requestFullscreen();}catch(e){}
+    try{await screen.orientation.lock('landscape');}catch(e){}
+    started=true;
+  }
+  $('overlay').style.display='none';
+  $('title').textContent='Paused';$('goBtn').textContent='Resume';
+  running=true;last=performance.now();
+  setTimeout(recenter,350);
+});
+$('setBtn').addEventListener('click',()=>{running=false;$('overlay').style.display='flex';});
+$('recenterBtn').addEventListener('click',recenter);
+
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+
+// GREEN PHONE EDIT: main loop
+const hud=$('hud'),arrow=$('arrow'),flash=$('flash');
+let last=performance.now();
+const fwdV=new THREE.Vector3(),camOff=new THREE.Vector3(),tmp=new THREE.Vector3();
+camera.position.set(0,2.4,9);
+
+function step(dt){
+  const tilt=tiltInput();
+  let turn=0,pitch=0;
+  const turnTilt=S.steer==='tilt'&&tilt;
+  const pitchTilt=S.steer==='tilt'&&S.throttle!=='tilt'&&tilt;
+  if(turnTilt)turn=tilt.turn;
+  turn+=keys.rt-keys.lf;
+  if(pitchTilt)pitch=-tilt.fwd;
+  pitch+=keys.up-keys.dn;
+  if(S.invTurn)turn=-turn;
+  if(S.invPitch)pitch=-pitch;
+  turn=clamp(turn,-1,1);pitch=clamp(pitch,-1,1);
+
+  if(S.throttle==='tilt'&&tilt)throttle=clamp(0.35+tilt.fwd*0.65,0,1);
+  if(keys.thUp)throttle=clamp(throttle+dt*0.6,0,1);
+  if(keys.thDn)throttle=clamp(throttle-dt*0.6,0,1);
+
+  const k=1-Math.exp(-dt*5);
+  pitchRate+=(pitch*1.5-pitchRate)*k;
+  yawRate+=(-turn*1.35-yawRate)*k;
+  q.multiply(tmpQ.setFromAxisAngle(AX,pitchRate*dt));
+  q.multiply(tmpQ.setFromAxisAngle(AY,yawRate*dt));
+  q.normalize();
+
+  speed+=(throttle*MAXSPEED-speed)*(1-Math.exp(-dt*1.4));
+  fwdV.set(0,0,-1).applyQuaternion(q);
+  vel.lerp(tmp.copy(fwdV).multiplyScalar(speed),1-Math.exp(-dt*2.2));
+  pos.addScaledVector(vel,dt);
+
+  bank+=(-turn*0.75-bank)*k;
+  ship.position.copy(pos);ship.quaternion.copy(q);
+  shipMesh.rotation.z=bank;shipMesh.rotation.x=pitchRate*0.12;
+  shipMesh.userData.engs.forEach(g=>{g.scale.set(1,0.3+throttle*2.2,1);g.position.z=1.95+(0.3+throttle*2.2)*0.5;});
+
+  // GREEN PHONE EDIT: rocks wrap around the ship so the field never ends
+  for(const m of rocks){
+    for(const a of ['x','y','z']){
+      const d=m.position[a]-pos[a];
+      if(d>FIELD)m.position[a]-=FIELD*2;else if(d<-FIELD)m.position[a]+=FIELD*2;
+    }
+    m.rotation.x+=m.userData.spin.x*dt;m.rotation.y+=m.userData.spin.y*dt;
+    const dist=m.position.distanceTo(pos),min=m.userData.r+1.8;
+    if(dist<min){
+      const n=tmp.copy(pos).sub(m.position).normalize();
+      pos.copy(m.position).addScaledVector(n,min+0.1);
+      const vn=vel.dot(n);if(vn<0)vel.addScaledVector(n,-1.6*vn);
+      speed*=0.35;shake=0.6;flash.style.opacity=0.35;setTimeout(()=>flash.style.opacity=0,120);
+    }
+  }
+  const p=dgeo.attributes.position.array;
+  for(let i=0;i<p.length;i+=3){
+    for(let j=0;j<3;j++){
+      const c=j===0?pos.x:j===1?pos.y:pos.z;
+      const d=p[i+j]-c;
+      if(d>DUST)p[i+j]-=DUST*2;else if(d<-DUST)p[i+j]+=DUST*2;
+    }
+  }
+  dgeo.attributes.position.needsUpdate=true;
+
+  gate.rotation.z+=dt*0.5;
+  if(gate.position.distanceTo(pos)<10.5){gates++;placeGate();}
+  else if(gate.position.distanceTo(pos)>1100)placeGate();
+
+  // GREEN PHONE EDIT: chase camera follows full 3D orientation
+  camOff.set(0,1.9,6.5+speed*0.015).applyQuaternion(q);
+  const ck=1-Math.exp(-dt*6);
+  camera.position.lerp(tmp.copy(pos).add(camOff),ck);
+  const look=q.clone().multiply(tmpQ.setFromAxisAngle(AX,-0.1));
+  camera.quaternion.slerp(look,ck);
+  if(shake>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}
+  camera.fov=68+speed*0.12;camera.updateProjectionMatrix();
+
+  fill.style.height=(throttle*100)+'%';
+  const gd=gate.position.distanceTo(pos);
+  hud.innerHTML='Speed '+Math.round(speed)+'<br>Throttle '+Math.round(throttle*100)+'%<br>Rings '+gates+'<br>Next ring '+Math.round(gd)+'m'+(S.steer==='tilt'&&!tRaw?'<br>No tilt sensor yet':'');
+
+  // GREEN PHONE EDIT: edge arrow points to the next ring when it is off screen
+  const v=gate.position.clone().project(camera);
+  const behind=tmp.copy(gate.position).sub(camera.position).dot(new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion))<0;
+  if(behind||Math.abs(v.x)>0.95||Math.abs(v.y)>0.95){
+    let x=v.x,y=v.y;if(behind){x=-x;y=-y;}
+    const ang=Math.atan2(x,y);
+    const R=Math.min(innerWidth,innerHeight)*0.42;
+    arrow.style.display='block';
+    arrow.style.left=(innerWidth/2+Math.sin(ang)*R-11)+'px';
+    arrow.style.top=(innerHeight/2-Math.cos(ang)*R-11)+'px';
+    arrow.style.transform='rotate('+ang+'rad)';
+  }else arrow.style.display='none';
+}
+
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(running)step(dt);
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
